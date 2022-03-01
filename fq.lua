@@ -291,13 +291,8 @@ end
 
 return {
     num = num,
-    carry = carry,
-    intAdd = intAdd,
-    intMul = intMul,
-    reduce = reduce,
     add = add,
     neg = neg,
-    redc = redc,
     montgomery = montgomery,
     demontgomery = demontgomery,
     mul = mul,

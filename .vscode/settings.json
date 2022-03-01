@@ -1,0 +1,50 @@
+{
+    "Lua.diagnostics.disable": [
+        "err-esc",
+        "lowercase-global",
+        "deprecated",
+        "redefined-local"
+    ],
+    "Lua.diagnostics.severity": {
+        "redefined-local": "Warning"
+    },
+    "Lua.diagnostics.globals": [
+        "printError",
+        "sleep",
+        "read",
+        "write",
+        "print",
+        "colours",
+        "colors",
+        "commands",
+        "disk",
+        "fs",
+        "gps",
+        "help",
+        "http",
+        "paintutils",
+        "parallel",
+        "peripheral",
+        "rednet",
+        "redstone",
+        "keys",
+        "settings",
+        "shell",
+        "multishell",
+        "term",
+        "textutils",
+        "turtle",
+        "pocket",
+        "vector",
+        "bit32",
+        "window",
+        "_CC_DEFAULT_SETTINGS",
+        "_HOST",
+        "_VERSION",
+        "_",
+        "_ENV",
+        "ccemux",
+        "wordlib"
+    ],
+    "Lua.runtime.version": "Lua 5.1"
+}

@@ -1,4 +1,4 @@
-local fp =     require "ccryptolibinternal.fp"
+local fp = require "ccryptolibinternal.fp"
 
 local function step(dx, x1, z1, x2, z2)
     local a = fp.add(x1, z1)

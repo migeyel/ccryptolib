@@ -1,5 +1,5 @@
 local expect = require "cc.expect".expect
-local fp =     require "ccryptolib.internal.fp"
+local fp     = require "ccryptolib.internal.fp"
 local x25519 = require "ccryptolib.internal.x25519"
 
 local G = {9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}

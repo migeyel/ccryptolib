@@ -1,7 +1,6 @@
-local expect = require "cc.expect".expect
-
-local chacha20 = require "ecnet.primitives.chacha20"
-local poly1305 = require "ecnet.primitives.poly1305"
+local expect =   require "cc.expect".expect
+local chacha20 = require "ccryptolib.chacha20"
+local poly1305 = require "ccryptolib.poly1305"
 
 local bxor = bit32.bxor
 local bor = bit32.bor

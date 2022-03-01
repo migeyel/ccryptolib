@@ -1,5 +1,5 @@
 local expect = require "cc.expect".expect
-local fp = require "ecnet.primitives.fp"
+local fp =     require "ccryptolib.fp"
 
 local add = fp.add
 local sub = fp.sub

@@ -1,6 +1,6 @@
 --- Arithmetic on Curve25519's scalar field.
 --
--- @module ccryptolib.fq
+-- @module ccryptolib.internal.fq
 --
 
 local util = require "ccryptolib.util"

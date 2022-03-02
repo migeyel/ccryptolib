@@ -1,5 +1,9 @@
 local unpack = unpack or table.unpack
 
+local function num(n)
+    return {n, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+end
+
 local function add(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
     local b00, b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11 = unpack(b)
@@ -497,6 +501,7 @@ local function decode(b)
 end
 
 return {
+    num = num,
     add = add,
     sub = sub,
     kmul = kmul,

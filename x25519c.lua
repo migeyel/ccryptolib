@@ -37,6 +37,34 @@ local function fqDecodeStd(str)
     return fq.montgomery(words)
 end
 
+local function ladder8(dx, bits)
+    local x1 = fp.num(1)
+    local z1 = fp.num(0)
+
+    -- Compute a randomization factor for randomized projective coordinates.
+    -- Biased but good enough.
+    local rf = fp.decode(random.random(32))
+
+    local x2 = fp.mul(rf, dx)
+    local z2 = rf
+
+    -- Standard ladder.
+    for i = #bits, 1, -1 do
+        if bits[i] == 0 then
+            x1, z1, x2, z2 = x25519.step(dx, x1, z1, x2, z2)
+        else
+            x2, z2, x1, z1 = x25519.step(dx, x2, z2, x1, z1)
+        end
+    end
+
+    -- Multiply by 8 (double 3 times).
+    for _ = 1, 3 do
+        x1, z1 = x25519.double(x1, z1)
+    end
+
+    return fp.mul(x1, fp.invert(z1))
+end
+
 local mod = {}
 
 function mod.secretKeyInit(sk)
@@ -102,10 +130,8 @@ function mod.exchange(sk, pk, mc)
     -- We have our exponent modulo q. We also know that its value is 0 modulo 8.
     -- Use the Chinese Remainder Theorem to find its value modulo 8q.
     local bits = fq.bits(fq.mul(skmt, INV8Q))
-    local bits8 = {0, 0, 0}
-    for i = 1, 253 do bits8[i + 3] = bits[i] end
 
-    return fp.encode(x25519.ladder(fp.decode(pk), bits8))
+    return fp.encode(ladder8(fp.decode(pk), bits))
 end
 
 return mod

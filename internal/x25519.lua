@@ -2,6 +2,17 @@ local fp = require "ccryptolib.internal.fp"
 
 local G = {9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
+local function double(x1, z1)
+    local a = fp.add(x1, z1)
+    local aa = fp.square(a)
+    local b = fp.sub(x1, z1)
+    local bb = fp.square(b)
+    local c = fp.sub(aa, bb)
+    local x3 = fp.mul(aa, bb)
+    local z3 = fp.mul(c, fp.add(bb, fp.kmul(c, 121666)))
+    return x3, z3
+end
+
 local function step(dx, x1, z1, x2, z2)
     local a = fp.add(x1, z1)
     local aa = fp.square(a)
@@ -19,48 +30,8 @@ local function step(dx, x1, z1, x2, z2)
     return x3, z3, x4, z4
 end
 
-local function ladder(dx, bits)
-    local x1 = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-    local z1 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-    local x2, z2 = dx, x1
-
-    for i = #bits, 1, -1 do
-        if bits[i] == 0 then
-            x1, z1, x2, z2 = step(dx, x1, z1, x2, z2)
-        else
-            x2, z2, x1, z1 = step(dx, x2, z2, x1, z1)
-        end
-    end
-
-    return fp.mul(x1, fp.invert(z1))
-end
-
-local function bits(str)
-    -- Decode.
-    local bytes = {str:byte(1, 32)}
-    local out = {}
-    for i = 1, 32 do
-        local byte = bytes[i]
-        for j = -7, 0 do
-            local bit = byte % 2
-            out[8 * i + j] = bit
-            byte = (byte - bit) / 2
-        end
-    end
-
-    -- Clamp.
-    out[1] = 0
-    out[2] = 0
-    out[3] = 0
-    out[256] = 0
-    out[255] = 1
-
-    return out
-end
-
 return {
     G = G,
+    double = double,
     step = step,
-    ladder = ladder,
-    bits = bits,
 }

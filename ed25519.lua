@@ -228,4 +228,64 @@ local function mul(P, bits)
     return R
 end
 
-error("TODO")
+local mod = {}
+
+function mod.publicKey(sk)
+    expect(1, sk, "string")
+    assert(#sk == 32, "secret key length must be 32")
+
+    local h = sha512.digest(sk)
+    local x = fq.decodeClamped(h:sub(1, 32))
+
+    return encode(scale(mulG(fq.bits(x))))
+end
+
+function mod.sign(sk, pk, msg)
+    expect(1, sk, "string")
+    assert(#sk == 32, "secret key length must be 32")
+    expect(2, pk, "string")
+    assert(#pk == 32, "public key length must be 32")
+    expect(3, msg, "string")
+
+    -- Secret key.
+    local h = sha512.digest(sk)
+    local x = fq.decodeClamped(h:sub(1, 32))
+
+    -- Commitment.
+    local k = fq.decodeWide(sha512.digest(h:sub(33) .. msg))
+    local r = mulG(fq.bits(k))
+    local rStr = encode(scale(r))
+
+    -- Challenge.
+    local e = fq.decodeWide(sha512.digest(rStr .. pk .. msg))
+
+    -- Response.
+    local s = fq.add(k, fq.neg(fq.mul(x, e)))
+    local sStr = fq.encode(s)
+
+    return rStr .. sStr
+end
+
+function mod.verify(pk, msg, sig)
+    expect(1, pk, "string")
+    assert(#pk == 32, "public key length must be 32")
+    expect(2, msg, "string")
+    expect(3, sig, "string")
+    assert(#sig == 64, "signature length must be 64")
+
+    local y = decode(pk)
+    if not y then return nil end
+
+    local rStr = sig:sub(1, 32)
+    local sStr = sig:sub(33)
+
+    local e = fq.decodeWide(sha512.digest(rStr .. pk .. msg))
+
+    local gs = mulG(fq.bits(fq.decode(sStr)))
+    local ye = mul(y, fq.bits(e))
+    local rv = add(gs, niels(ye))
+
+    return encode(scale(rv)) == rStr
+end
+
+return mod

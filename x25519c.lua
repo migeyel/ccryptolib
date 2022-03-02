@@ -97,22 +97,22 @@ function mod.secretKeyDecode(str)
     return out
 end
 
-function mod.secretKeyRemask(sk)
+function mod.secretKeyRemask(sks)
     local sum = fq.num(0)
     local out = {}
 
     for i = 1, ORDER - 1 do
         local element = fqRandom()
-        out[i] = fq.add(sk[i], element)
+        out[i] = fq.add(sks[i], element)
         sum = fq.add(sum, element)
     end
 
-    out[ORDER] = fq.add(sk[ORDER], fq.neg(sum))
+    out[ORDER] = fq.add(sks[ORDER], fq.neg(sum))
 
     return out
 end
 
-function mod.exchange(sk, pk, mc)
+function mod.exchange(sks, pk, mc)
     expect(2, pk, "string")
     assert(#pk == 32, "public key length must be 32")
     expect(3, mc, "string")
@@ -124,7 +124,7 @@ function mod.exchange(sk, pk, mc)
     -- Multiply secret key members and add them together.
     -- This unwraps into the "true" secret key times the multiplier (mod q).
     local skmt = fq.num(0)
-    for i = 1, #sk do skmt = fq.add(skmt, fq.mul(sk[i], mc)) end
+    for i = 1, #sks do skmt = fq.add(skmt, fq.mul(sks[i], mc)) end
 
     -- Get bits.
     -- We have our exponent modulo q. We also know that its value is 0 modulo 8.

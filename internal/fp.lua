@@ -1,6 +1,6 @@
 --- Arithmetic on Curve25519's base field.
 --
--- @module internal.fq
+-- @module internal.fp
 --
 
 local unpack = unpack or table.unpack
@@ -80,35 +80,35 @@ local CDIFF = {
 --   <tr><td> 11  </td><td>   (-2²¹..2²¹)   </td><td>   2²³⁴   </td></tr>
 -- </table>
 --
--- @type fq
+-- @type fp
 --
-local fq = nil
-if fq ~= nil then return end
+local fp = nil
+if fp ~= nil then return end
 
---- A nonnegative @{fq}.
+--- A nonnegative @{fp}.
 --
 -- This type represents elements that have no negative coefficients.
 --
--- @type fqAbs
+-- @type fpAbs
 --
-local fqAbs = nil
-if fqAbs ~= nil then return end
+local fpAbs = nil
+if fpAbs ~= nil then return end
 
---- An uncarried @{fq}.
+--- An uncarried @{fp}.
 --
 -- This type represents elements that have coefficients in a wider range than
--- the limits specified in @{fq}. Specifically, this represents all the results
+-- the limits specified in @{fp}. Specifically, this represents all the results
 -- of uncarried float-wise additions of two elements.
 --
--- @type fqUncarried
+-- @type fpUncarried
 --
-local fqUncarried = nil
-if fqUncarried ~= nil then return end
+local fpUncarried = nil
+if fpUncarried ~= nil then return end
 
 --- Converts a Lua number to an element.
 --
 -- @tparam number n A number n in [0..2²²).
--- @treturn fqAbs n as a base field element.
+-- @treturn fpAbs n as a base field element.
 --
 local function num(n)
     return {n, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -116,9 +116,9 @@ end
 
 --- Adds two elements.
 --
--- @tparam fq a
--- @tparam fq b
--- @treturn fqUncarried
+-- @tparam fp a
+-- @tparam fp b
+-- @treturn fpUncarried
 --
 local function add(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -141,8 +141,8 @@ end
 
 --- Negates an element.
 --
--- @tparam fq a
--- @treturn fq
+-- @tparam fp a
+-- @treturn fp
 --
 local function neg(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -165,15 +165,15 @@ end
 --- Subtracts an element from another.
 --
 -- If both elements are positive, then the result can be guaranteed to fit in
--- a single @{fq} without needing any carrying.
+-- a single @{fp} without needing any carrying.
 --
--- @tparam[1] fq a
--- @tparam[1] fq b
--- @treturn[1] fqUncarried
+-- @tparam[1] fp a
+-- @tparam[1] fp b
+-- @treturn[1] fpUncarried
 --
--- @tparam[2] fqAbs a
--- @tparam[2] fqAbs b
--- @treturn[2] fq
+-- @tparam[2] fpAbs a
+-- @tparam[2] fpAbs b
+-- @treturn[2] fp
 --
 local function sub(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -196,8 +196,8 @@ end
 
 --- Carries an element.
 --
--- @tparam fqUncarried a
--- @treturn fqAbs
+-- @tparam fpUncarried a
+-- @treturn fpAbs
 --
 local function carry(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -227,7 +227,7 @@ end
 --
 -- @see canonicalize
 --
--- @tparam fqAbs a
+-- @tparam fpAbs a
 -- @treturn boolean
 --
 local function isCanonical(a)
@@ -252,8 +252,8 @@ end
 -- returns the canonical element of the represented equivalence class. We define
 -- an element as canonical if it's the smallest nonnegative number in its class.
 --
--- @tparam fq a
--- @treturn fqAbs
+-- @tparam fp a
+-- @treturn fpAbs
 --
 local function canonicalize(a)
     a = carry(a)
@@ -264,8 +264,8 @@ end
 
 --- Returns whether two elements are the same.
 --
--- @tparam fqAbs a
--- @tparam fqAbs b
+-- @tparam fpAbs a
+-- @tparam fpAbs b
 -- @treturn boolean
 --
 local function eq(a, b)
@@ -281,9 +281,9 @@ end
 
 --- Multiplies two elements.
 --
--- @tparam fqUncarried a
--- @tparam fqUncarried b
--- @treturn fqAbs
+-- @tparam fpUncarried a
+-- @tparam fpUncarried b
+-- @treturn fpAbs
 --
 local function mul(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -472,8 +472,8 @@ end
 
 --- Squares an element.
 --
--- @tparam fqUncarried a
--- @treturn fqAbs
+-- @tparam fpUncarried a
+-- @treturn fpAbs
 --
 local function square(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -609,9 +609,9 @@ end
 
 --- Multiplies an element by a number.
 --
--- @tparam fqUncarried a
+-- @tparam fpUncarried a
 -- @tparam number k A number k in [0..2²¹).
--- @treturn fqAbs
+-- @treturn fpAbs
 --
 local function kmul(a, k)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -635,9 +635,9 @@ end
 
 --- Squares a modp number n times.
 --
--- @tparam fqUncarried a
+-- @tparam fpUncarried a
 -- @tparam number n
--- @treturn fqAbs
+-- @treturn fpAbs
 --
 local function nsquare(a, n)
     for _ = 1, n do a = square(a) end
@@ -648,9 +648,9 @@ end
 --
 -- Computation of the inverse requires 11 multiplicationss and 252 squarings.
 --
--- @tparam fqUncarried a
--- @treturn[1] fqAbs a⁻¹
--- @treturn[2] fqAbs 0 if the argument is 0, which has no inverse.
+-- @tparam fpUncarried a
+-- @treturn[1] fpAbs a⁻¹
+-- @treturn[2] fpAbs 0 if the argument is 0, which has no inverse.
 --
 local function invert(a)
     local a2 = square(a)
@@ -671,11 +671,11 @@ end
 
 --- Returns an element x that satisfies v * x² = u.
 --
--- Note that when v = 0, the returned value can take any @{fqAbs} value.
+-- Note that when v = 0, the returned value can take any @{fpAbs} value.
 --
--- @tparam fqUncarried u
--- @tparam fqUncarried v
--- @treturn[1] fqAbs x
+-- @tparam fpUncarried u
+-- @tparam fpUncarried v
+-- @treturn[1] fpAbs x
 -- @treturn[2] nil if there is no solution.
 --
 local function sqrtDiv(u, v)
@@ -720,7 +720,7 @@ end
 
 --- Encodes an element in little-endian.
 --
--- @tparam fqAbs a
+-- @tparam fpAbs a
 -- @treturn string A 32-byte string. Always represents the canonical element.
 --
 local function encode(a)
@@ -757,7 +757,7 @@ end
 --- Decodes an element in little-endian.
 --
 -- @tparam string b A 32-byte string. The most-significant bit is discarded.
--- @treturn fqAbs The decoded element. May not be canonical.
+-- @treturn fpAbs The decoded element. May not be canonical.
 --
 local function decode(b)
     local w00, w01, w02, w03, w04, w05, w06, w07, w08, w09, w10, w11 =

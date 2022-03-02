@@ -1,6 +1,6 @@
 --- The SHA512 cryptographic hash function.
 --
--- @module ccryptolib.internal.sha512
+-- @module internal.sha512
 --
 
 local expect = require "cc.expect".expect

@@ -3,7 +3,7 @@
 -- @module ccryptolib.internal.fq
 --
 
-local util = require "ccryptolib.util"
+local util = require "ccryptolib.internal.util"
 
 local unpack = unpack or table.unpack
 

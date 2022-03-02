@@ -1,4 +1,6 @@
-local fp = require "ccryptolibinternal.fp"
+local fp = require "ccryptolib.internal.fp"
+
+local G = {9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 local function step(dx, x1, z1, x2, z2)
     local a = fp.add(x1, z1)
@@ -57,6 +59,7 @@ local function bits(str)
 end
 
 return {
+    G = G,
     step = step,
     ladder = ladder,
     bits = bits,

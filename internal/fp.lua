@@ -50,65 +50,27 @@ local CDIFF = {
 -- For our implementation, we use an array of 12 floats. Each one has a specific
 -- exponent and mantissa range.
 --
--- <!-- My best wishes to whoever is doing the Markdown parsing. -->
--- <style>
---   table.mdt {
---     border-collapse: collapse;
---   }
---   table.mdt td, table.mdt th {
---     border: 1px solid #cccccc;
---     padding: 5px;
---     text-align: center;
---   }
---   table.mdt th {
---     background-color: var(--background-2);
---   }
--- </style>
--- <table class="mdt">
---   <tr><th>Index</th><th>Coefficient Range</th><th>Multiplier</th></tr>
---   <tr><td>  0  </td><td>   (-2²²..2²²)   </td><td>   2⁰     </td></tr>
---   <tr><td>  1  </td><td>   (-2²¹..2²¹)   </td><td>   2²²    </td></tr>
---   <tr><td>  2  </td><td>   (-2²¹..2²¹)   </td><td>   2⁴³    </td></tr>
---   <tr><td>  3  </td><td>   (-2²¹..2²¹)   </td><td>   2⁶⁴    </td></tr>
---   <tr><td>  4  </td><td>   (-2²²..2²²)   </td><td>   2⁸⁵    </td></tr>
---   <tr><td>  5  </td><td>   (-2²¹..2²¹)   </td><td>   2¹⁰⁷   </td></tr>
---   <tr><td>  6  </td><td>   (-2²¹..2²¹)   </td><td>   2¹²⁸   </td></tr>
---   <tr><td>  7  </td><td>   (-2²¹..2²¹)   </td><td>   2¹⁴⁹   </td></tr>
---   <tr><td>  8  </td><td>   (-2²²..2²²)   </td><td>   2¹⁷⁰   </td></tr>
---   <tr><td>  9  </td><td>   (-2²¹..2²¹)   </td><td>   2¹⁹²   </td></tr>
---   <tr><td> 10  </td><td>   (-2²¹..2²¹)   </td><td>   2²¹³   </td></tr>
---   <tr><td> 11  </td><td>   (-2²¹..2²¹)   </td><td>   2²³⁴   </td></tr>
--- </table>
+-- A table t is said to be a float array iff it contains numbers at the entries
+-- indexed by {1, 2, 3, ..., #t} and nowhere else.
+--
+-- A float array t is said to be an fp iff #t == 12 and, for i in [0..12),
+-- t[i + 1] is an integer multiple of 2 ^ ⌈255 / 12 i⌉.
+-- i.e. ∀ i ∊ [0..12) ∃ m ∊ ℤ, t[i + 1] = m ✕ 2 ^ ⌈255 / 12 ✕ i⌉.
+--
+-- An fp t is said to represent some integer n iff Σ t[i] = n for i ∊ [1..12].
+--
+-- We say that an fp p is (α, β)-RC (α, β reduced coefficient) for α, β ∊ ℕ iff
+-- ∀ i ∊ [0..12), -α ✕ C ≤ p[i + 1] ≤ β ✕ C. Where C = 2 ^ ⌈255 / 12 ✕ (i + 1)⌉
 --
 -- @type fp
 --
 local fp = nil
 if fp ~= nil then return end
 
---- A nonnegative @{fp}.
---
--- This type represents elements that have no negative coefficients.
---
--- @type fpAbs
---
-local fpAbs = nil
-if fpAbs ~= nil then return end
-
---- An uncarried @{fp}.
---
--- This type represents elements that have coefficients in a wider range than
--- the limits specified in @{fp}. Specifically, this represents all the results
--- of uncarried float-wise additions of two elements.
---
--- @type fpUncarried
---
-local fpUncarried = nil
-if fpUncarried ~= nil then return end
-
 --- Converts a Lua number to an element.
 --
 -- @tparam number n A number n in [0..2²²).
--- @treturn fpAbs n as a base field element.
+-- @treturn fp n as an (0, 1)-RC fp.
 --
 local function num(n)
     return {n, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -116,9 +78,9 @@ end
 
 --- Adds two elements.
 --
--- @tparam fp a
--- @tparam fp b
--- @treturn fpUncarried
+-- @tparam fp a Some (α₁, β₁)-RC fp.
+-- @tparam fp b Some (α₂, β₂)-RC fp.
+-- @treturn fp a + b as an (α₁ + α₂, β₁ + β₂)-RC fp.
 --
 local function add(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -141,8 +103,8 @@ end
 
 --- Negates an element.
 --
--- @tparam fp a
--- @treturn fp
+-- @tparam fp a Some (α, β)-RC fp.
+-- @treturn fp -a as an (β, α)-RC fp.
 --
 local function neg(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -164,16 +126,9 @@ end
 
 --- Subtracts an element from another.
 --
--- If both elements are positive, then the result can be guaranteed to fit in
--- a single @{fp} without needing any carrying.
---
--- @tparam[1] fp a
--- @tparam[1] fp b
--- @treturn[1] fpUncarried
---
--- @tparam[2] fpAbs a
--- @tparam[2] fpAbs b
--- @treturn[2] fp
+-- @tparam fp a Some (α₁, β₁)-RC fp.
+-- @tparam fp b Some (α₂, β₂)-RC fp.
+-- @treturn fp a - b as an (α₁ + β₂, β₁ + α₂)-RC fp.
 --
 local function sub(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -196,8 +151,12 @@ end
 
 --- Carries an element.
 --
--- @tparam fpUncarried a
--- @treturn fpAbs
+-- Also performs a small reduction modulo p.
+--
+-- @tparam fp a Some (0, 4)-RC fp.
+-- @treturn fp a' ≡ a (mod p) as an (0, 1)-RC fp.
+--
+-- TODO See if this works for other (., .)-RC.
 --
 local function carry(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -227,8 +186,8 @@ end
 --
 -- @see canonicalize
 --
--- @tparam fpAbs a
--- @treturn boolean
+-- @tparam fp a Some (0, 1)-RC fp.
+-- @treturn boolean Whether a < p.
 --
 local function isCanonical(a)
     local e11 = bxor(a[12] * 2 ^ -234, 2 ^ 21 - 1)
@@ -252,8 +211,8 @@ end
 -- returns the canonical element of the represented equivalence class. We define
 -- an element as canonical if it's the smallest nonnegative number in its class.
 --
--- @tparam fp a
--- @treturn fpAbs
+-- @tparam fp a Some (0, 1)-RC fp.
+-- @treturn fp a mod p as an (0, 1)-RC fp.
 --
 local function canonicalize(a)
     a = carry(a)
@@ -264,9 +223,9 @@ end
 
 --- Returns whether two elements are the same.
 --
--- @tparam fpAbs a
--- @tparam fpAbs b
--- @treturn boolean
+-- @tparam fp a Some (0, 1)-RC fp.
+-- @tparam fp b Some (0, 1)-RC fp.
+-- @treturn boolean Whether the two polynomials are the same mod p.
 --
 local function eq(a, b)
     a = canonicalize(a)
@@ -281,9 +240,9 @@ end
 
 --- Multiplies two elements.
 --
--- @tparam fpUncarried a
--- @tparam fpUncarried b
--- @treturn fpAbs
+-- @tparam fp a Some (α₁, β₁)-RC fp.
+-- @tparam fp b Some (α₂, β₂)-RC fp with max{α₁ + α₂, β₁ + β₂} ≤ 4.
+-- @treturn fp c ≡ a ✕ b (mod p) as an (0, 1)-RC fp.
 --
 local function mul(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -472,8 +431,8 @@ end
 
 --- Squares an element.
 --
--- @tparam fpUncarried a
--- @treturn fpAbs
+-- @tparam fp a Some (α, β)-RC fp with max{α, β} ≤ 2.
+-- @treturn fp c ≡ a² (mod p) as an (0, 1)-RC fp.
 --
 local function square(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -609,14 +568,13 @@ end
 
 --- Multiplies an element by a number.
 --
--- @tparam fpUncarried a
--- @tparam number k A number k in [0..2²¹).
--- @treturn fpAbs
+-- @tparam fp Some (0, β)-RC fp.
+-- @tparam number k A number k in with 0 ≤ k ≤ 2 ^ ((4 - β) ✕ 21 / 4). -- TODO check constraints.
+-- @treturn fp c ≡ a ✕ k (mod p) as an (0, 1)-RC fp.
 --
 local function kmul(a, k)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
 
-    -- TODO WHY ARE TYPE CONSTRAINTS SO DIFFICULT TO SPECIFY
     return carry {
         a00 * k,
         a01 * k,
@@ -635,9 +593,9 @@ end
 
 --- Squares a modp number n times.
 --
--- @tparam fpUncarried a
--- @tparam number n
--- @treturn fpAbs
+-- @tparam fp a Some (α, β)-RC fp with max{α, β} ≤ 2.
+-- @tparam number n A positive integer.
+-- @treturn fp c ≡ a ^ (2 ^ n) (mod q) as an (0, 1)-RC fp.
 --
 local function nsquare(a, n)
     for _ = 1, n do a = square(a) end
@@ -648,9 +606,9 @@ end
 --
 -- Computation of the inverse requires 11 multiplicationss and 252 squarings.
 --
--- @tparam fpUncarried a
--- @treturn[1] fpAbs a⁻¹
--- @treturn[2] fpAbs 0 if the argument is 0, which has no inverse.
+-- @tparam fp a Some (α, β)-RC fp with max{α, β} ≤ 2.
+-- @treturn[1] fp c ≡ a⁻¹ (mod p) as an (0, 1)-RC fp, if a ≠ 0.
+-- @treturn[2] fp c ≡ 0 (mod p) as an (0, 1)-RC fp, if a = 0.
 --
 local function invert(a)
     local a2 = square(a)
@@ -671,11 +629,11 @@ end
 
 --- Returns an element x that satisfies v * x² = u.
 --
--- Note that when v = 0, the returned value can take any @{fpAbs} value.
+-- Note that when v = 0, the returned element can take any value.
 --
--- @tparam fpUncarried u
--- @tparam fpUncarried v
--- @treturn[1] fpAbs x
+-- @tparam fp u Some (0, 4)-RC fp.
+-- @tparam fp v Some (α, β)-RC fp with max{α, β} ≤ 2.
+-- @treturn[1] fp x as an (0, 1)-RC fp.
 -- @treturn[2] nil if there is no solution.
 --
 local function sqrtDiv(u, v)
@@ -720,7 +678,7 @@ end
 
 --- Encodes an element in little-endian.
 --
--- @tparam fpAbs a
+-- @tparam fp a Some (0, 1)-RC fp.
 -- @treturn string A 32-byte string. Always represents the canonical element.
 --
 local function encode(a)
@@ -757,7 +715,7 @@ end
 --- Decodes an element in little-endian.
 --
 -- @tparam string b A 32-byte string. The most-significant bit is discarded.
--- @treturn fpAbs The decoded element. May not be canonical.
+-- @treturn fp The decoded element as an (0, 1)-RC fp. May not be canonical.
 --
 local function decode(b)
     local w00, w01, w02, w03, w04, w05, w06, w07, w08, w09, w10, w11 =

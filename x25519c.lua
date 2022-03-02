@@ -25,18 +25,6 @@ local function fqRandom()
     return fq.decodeWide(random.random(64))
 end
 
-local function fqDecodeStd(str)
-    -- Decode.
-    local words = {("<I3I3I3I3I3I3I3I3I3I3I2"):unpack(str)} words[12] = nil
-
-    -- Clamp.
-    words[1] = bit32.band(words[1], 0xfffff8)
-    words[11] = bit32.band(words[11], 0x7fff)
-    words[11] = bit32.bor(words[11], 0x4000)
-
-    return fq.montgomery(words)
-end
-
 local function ladder8(dx, bits)
     local x1 = fp.num(1)
     local z1 = fp.num(0)
@@ -68,7 +56,7 @@ end
 local mod = {}
 
 function mod.secretKeyInit(sk)
-    sk = fqDecodeStd(sk)
+    sk = fq.decodeClamped(sk)
 
     -- Set up the mask.
     local sks = {}
@@ -119,7 +107,7 @@ function mod.exchange(sks, pk, mc)
     assert(#mc == 32, "multiplier length must be 32")
 
     -- Get the multiplier in Fq.
-    mc = fqDecodeStd(mc)
+    mc = fq.decodeClamped(mc)
 
     -- Multiply secret key members and add them together.
     -- This unwraps into the "true" secret key times the multiplier (mod q).

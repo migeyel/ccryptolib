@@ -280,6 +280,23 @@ local function decodeWide(str)
     return add(montgomery(low), montgomery(montgomery(high)))
 end
 
+--- Decodes a scalar using the X25519/Ed25519 bit clamping scheme.
+--
+-- @tparam string str A 32-byte string encoding some little-endian number a.
+-- @treturn 2²⁶⁵ * clamp(a) mod q as 11 linbs in [0..2²⁴).
+--
+local function decodeClamped(str)
+    -- Decode.
+    local words = {("<I3I3I3I3I3I3I3I3I3I3I2"):unpack(str)} words[12] = nil
+
+    -- Clamp.
+    words[1] = bit32.band(words[1], 0xfffff8)
+    words[11] = bit32.band(words[11], 0x7fff)
+    words[11] = bit32.bor(words[11], 0x4000)
+
+    return montgomery(words)
+end
+
 --- Returns a scalar in binary.
 --
 -- @tparam {number...} a A number a < q as limbs in [0..2²⁴).
@@ -300,5 +317,6 @@ return {
     encode = encode,
     decode = decode,
     decodeWide = decodeWide,
+    decodeClamped = decodeClamped,
     bits = bits,
 }

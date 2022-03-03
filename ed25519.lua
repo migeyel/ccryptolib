@@ -7,8 +7,6 @@ local expect = require "cc.expect".expect
 local fp     = require "ccryptolib.internal.fp"
 local fq     = require "ccryptolib.internal.fq"
 local sha512 = require "ccryptolib.internal.sha512"
-local util   = require "ccryptolib.internal.util"
-local random = require "ccryptolib.random"
 
 local unpack = unpack or table.unpack
 

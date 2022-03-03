@@ -22,13 +22,6 @@ local Q = {
     00004096,
 }
 
-local INVEXP_BITS = nil
-do
-    local Q2 = {unpack(Q)}
-    Q2[1] = Q2[1] - 2
-    INVEXP_BITS = util.rebaseLE(Q2, 2 ^ 24, 2)
-end
-
 --- The first Montgomery precomputed constant, -q⁻¹ mod 2²⁶⁴.
 local T0 = {
     05537307,
@@ -231,25 +224,6 @@ local function mul(a, b)
     return redc(intMul(a, b))
 end
 
---- Inverts a scalar mod q.
---
--- Computation of the inverse takes 338 multiplications.
---
--- @tparam {number...} a A number 2²⁶⁴ ✕ a mod q as 11 limbs in [0..2²⁴).
--- @treturn[1] {number...} 2²⁶⁴ ✕ a⁻¹ mod q as 11 limbs in [0..2²⁴).
--- @treturn[2] {number...} 0 if the argument is 0, which has no inverse.
---
-local function invert(a)
-    local r = num(1)
-    for i = 1, #INVEXP_BITS do
-        if INVEXP_BITS[i] == 1 then
-            r = mul(r, a)
-        end
-        a = mul(a, a)
-    end
-    return r
-end
-
 --- Encodes a scalar.
 --
 -- @tparam {number...} a A number 2²⁶⁴ ✕ a mod q as 11 limbs in [0..2²⁴).
@@ -313,7 +287,6 @@ return {
     montgomery = montgomery,
     demontgomery = demontgomery,
     mul = mul,
-    invert = invert,
     encode = encode,
     decode = decode,
     decodeWide = decodeWide,

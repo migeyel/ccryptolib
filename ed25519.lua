@@ -1,5 +1,8 @@
 --- The Ed25519 signature scheme.
 --
+-- **Note:** This library is provided for compatibility and provides no side
+-- channel resistance by itself.
+--
 -- @module ed25519
 --
 
@@ -228,6 +231,11 @@ end
 
 local mod = {}
 
+--- Computes a public key from a secret key.
+--
+-- @tparam string sk A random 32-byte secret key.
+-- @treturn string The matching 32-byte public key.
+--
 function mod.publicKey(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
@@ -238,6 +246,13 @@ function mod.publicKey(sk)
     return encode(scale(mulG(fq.bits(x))))
 end
 
+--- Signs a message.
+--
+-- @tparam string sk The signer's secret key.
+-- @tparam string pk The signer's public key.
+-- @tparam string msg The message to be signed.
+-- @treturn string The 64-byte signature on the message.
+--
 function mod.sign(sk, pk, msg)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
@@ -264,6 +279,13 @@ function mod.sign(sk, pk, msg)
     return rStr .. sStr
 end
 
+--- Verifies a signature on a message.
+--
+-- @tparam string pk The signer's public key.
+-- @tparam string msg The signed message.
+-- @tparam string sig The signature.
+-- @treturn boolean Whether the signature is valid or not.
+--
 function mod.verify(pk, msg, sig)
     expect(1, pk, "string")
     assert(#pk == 32, "public key length must be 32")

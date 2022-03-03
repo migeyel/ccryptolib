@@ -1,4 +1,4 @@
---- Arithmetic on Curve25519's base field.
+--- Arithmetic on Curve25519's base field (unstable, for internal use only).
 --
 -- @module internal.fp
 --

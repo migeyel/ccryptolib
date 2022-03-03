@@ -1,4 +1,4 @@
---- The SHA512 cryptographic hash function.
+--- The SHA512 cryptographic hash function (unstable, for internal use only).
 --
 -- @module internal.sha512
 --

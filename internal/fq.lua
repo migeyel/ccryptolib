@@ -280,6 +280,11 @@ local function bits(a)
     return util.rebaseLE(demontgomery(a), 2 ^ 24, 2)
 end
 
+--- Clones a scalar.
+--
+-- @tparam {number...} a The scalar to clone.
+-- @treturn {number...} The exact same value but as a different object.
+--
 local function clone(a)
     return {unpack(a)}
 end

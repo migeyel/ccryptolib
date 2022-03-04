@@ -40,11 +40,11 @@ function mod.sign(sks, pk, msg)
     -- Challenge.
     local e = fq.decodeWide(sha512.digest(rStr .. pk .. msg))
 
-    -- Reduce secret key using the challenge.
-    local xe = maddq.reduce(sks, e)
-
     -- Response.
-    local s = fq.add(k, fq.neg(xe))
+    -- Reduce secret key using the challenge and an extra mask.
+    local m = fq.decodeWide(random.random(64))
+    local xme = maddq.reduce(maddq.add(sks, m), e)
+    local s = fq.add(fq.add(k, fq.neg(xme)), fq.mul(m, e))
     local sStr = fq.encode(s)
 
     return rStr .. sStr

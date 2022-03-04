@@ -280,6 +280,10 @@ local function bits(a)
     return util.rebaseLE(demontgomery(a), 2 ^ 24, 2)
 end
 
+local function clone(a)
+    return {unpack(a)}
+end
+
 return {
     num = num,
     add = add,
@@ -292,4 +296,5 @@ return {
     decodeWide = decodeWide,
     decodeClamped = decodeClamped,
     bits = bits,
+    clone = clone,
 }

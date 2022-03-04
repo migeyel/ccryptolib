@@ -38,10 +38,18 @@ local function reduce(arr, k)
     return out
 end
 
+local function add(arr, v)
+    local out = {}
+    for i = 1, #arr do out[i] = fq.clone(arr[i]) end
+    out[#arr] = fq.add(out[#arr], v)
+    return out
+end
+
 return {
     new = new,
     encode = encode,
     decode = decode,
     remask = remask,
     reduce = reduce,
+    add = add,
 }

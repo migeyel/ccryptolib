@@ -43,7 +43,7 @@ function mod.sign(sks, pk, msg)
     -- Response.
     -- Reduce secret key using the challenge and an extra mask.
     local m = fq.decodeWide(random.random(64))
-    local xme = maddq.reduce(maddq.add(sks, m), e)
+    local xme = maddq.unwrap(maddq.mul(maddq.add(sks, m), e))
     local s = fq.add(fq.add(k, fq.neg(xme)), fq.mul(m, e))
     local sStr = fq.encode(s)
 

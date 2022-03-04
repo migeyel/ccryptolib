@@ -81,7 +81,7 @@ function mod.exchange(sks, pk, mc)
     assert(#mc == 32, "multiplier length must be 32")
 
     -- Reduce secret key using the multiplier.
-    local skmc = maddq.reduce(sks, fq.decodeClamped(mc))
+    local skmc = maddq.unwrap(maddq.mul(sks, fq.decodeClamped(mc)))
 
     -- Get bits.
     -- We have our exponent modulo q. We also know that its value is 0 modulo 8.

@@ -14,6 +14,12 @@ local function new(val, order)
     return out
 end
 
+local function unwrap(arr)
+    local sum = fq.num(0)
+    for i = 1, #arr do sum = fq.add(sum, arr[i]) end
+    return sum
+end
+
 local function encode(arr)
     local out = {}
     for i = 1, #arr do out[i] = fq.encode(arr[i]) end
@@ -32,9 +38,9 @@ local function remask(arr)
     return out
 end
 
-local function reduce(arr, k)
-    local out = fq.num(0)
-    for i = 1, #arr do out = fq.add(out, fq.mul(arr[i], k)) end
+local function mul(arr, k)
+    local out = {}
+    for i = 1, #arr do out[i] = fq.mul(arr[i], k) end
     return out
 end
 
@@ -47,9 +53,10 @@ end
 
 return {
     new = new,
+    unwrap = unwrap,
     encode = encode,
     decode = decode,
     remask = remask,
-    reduce = reduce,
+    mul = mul,
     add = add,
 }

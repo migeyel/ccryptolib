@@ -46,8 +46,8 @@ local function save()
 end
 
 -- Load.
-if fs.exists("./random") then
-    local file = fs.open("./random", "rb")
+if fs.exists("/.random") then
+    local file = fs.open("/.random", "rb")
     seed(file.read(32) or "")
 end
 

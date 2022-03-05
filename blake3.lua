@@ -1,3 +1,8 @@
+--- The BLAKE3 cryptographic hash function.
+--
+-- @module blake3
+--
+
 local expect = require "cc.expect".expect
 
 local unpack = unpack or table.unpack
@@ -197,6 +202,12 @@ end
 
 local mod = {}
 
+--- Hashes data using BLAKE3.
+--
+-- @tparam string message The input message.
+-- @tparam[opt=32] number len The desired hash length, in bytes.
+-- @treturn string The hash.
+--
 function mod.digest(message, len)
     expect(1, message, "string")
     expect(2, len, "number", "nil")
@@ -206,6 +217,13 @@ function mod.digest(message, len)
     return blake3(IV, 0, message, len)
 end
 
+--- Performs a keyed hash.
+--
+-- @tparam string key A 32-byte random key.
+-- @tparam string message The input message.
+-- @tparam[opt=32] number len The desired hash length, in bytes.
+-- @treturn string The keyed hash.
+--
 function mod.digestKeyed(key, message, len)
     expect(1, key, "string")
     assert(#key == 32, "key length must be 32")
@@ -217,6 +235,11 @@ function mod.digestKeyed(key, message, len)
     return blake3({("<I4I4I4I4I4I4I4I4"):unpack(key)}, KEYED_HASH, message, len)
 end
 
+--- Makes a context-based key derivation function (KDF).
+--
+-- @tparam string context The context for the KDF.
+-- @treturn function(material:string [, len:number]):string The KDF.
+--
 function mod.deriveKey(context)
     expect(1, context, "string")
 

@@ -1,3 +1,8 @@
+--- The ChaCha20Poly1305AEAD authenticated encryption with associated data (AEAD) construction.
+--
+-- @module aead
+--
+
 local expect   = require "cc.expect".expect
 local chacha20 = require "ccryptolib.chacha20"
 local poly1305 = require "ccryptolib.poly1305"
@@ -5,6 +10,16 @@ local poly1305 = require "ccryptolib.poly1305"
 local bxor = bit32.bxor
 local bor = bit32.bor
 
+--- Encrypts a message.
+--
+-- @tparam string key A 32-byte random key.
+-- @tparam string nonce A 12-byte per-message unique nonce.
+-- @tparam string message The message to be encrypted.
+-- @tparam string aad Arbitrary associated data to authenticate on decryption.
+-- @tparam[opt=20] number rounds The number of ChaCha20 rounds to use.
+-- @treturn string The ciphertext.
+-- @treturn string The 16-byte authentication tag.
+--
 local function encrypt(key, nonce, message, aad, rounds)
     expect(1, key, "string")
     assert(#key == 32, "key length must be 32")
@@ -32,6 +47,17 @@ local function encrypt(key, nonce, message, aad, rounds)
     return ciphertext, tag
 end
 
+--- Decrypts a message.
+--
+-- @tparam string key The key used on encryption.
+-- @tparam string nonce The nonce used on encryption.
+-- @tparam string ciphertext The ciphertext to be decrypted.
+-- @tparam string aad The arbitrary associated data used on encryption.
+-- @tparam string tag The authentication tag returned on encryption.
+-- @tparam[opt=20] number rounds The number of rounds used on encryption.
+-- @treturn[1] string The decrypted plaintext.
+-- @treturn[2] nil If authentication has failed.
+--
 local function decrypt(key, nonce, tag, ciphertext, aad, rounds)
     expect(1, key, "string")
     assert(#key == 32, "key length must be 32")

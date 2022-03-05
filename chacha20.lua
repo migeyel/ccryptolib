@@ -1,3 +1,8 @@
+--- The ChaCha20 stream cipher.
+--
+-- @module chacha20
+--
+
 local expect = require "cc.expect".expect
 
 local bxor = bit32.bxor
@@ -5,6 +10,15 @@ local rol = bit32.lrotate
 
 local mod = {}
 
+--- Encrypts/Decrypts data using ChaCha20.
+--
+-- @tparam string key A 32-byte random key.
+-- @tparam string nonce A 12-byte per-message unique nonce.
+-- @tparam string message A plaintext or ciphertext.
+-- @tparam[opt=20] number rounds The number of ChaCha20 rounds to use.
+-- @tparam[opt=1] number offset The block offset to generate the keystream at.
+-- @treturn string The resulting ciphertext or plaintext.
+--
 function mod.crypt(key, nonce, message, rounds, offset)
     expect(1, key, "string")
     assert(#key == 32, "key length must be 32")

@@ -1,4 +1,11 @@
---- The SHA512 cryptographic hash function (unstable, for internal use only).
+--- The SHA512 cryptographic hash function.
+--
+-- :::note Internal Module
+-- This module is meant for internal use within the library. Its API is unstable
+-- and subject to change without major version bumps.
+-- :::
+--
+-- <br />
 --
 -- @module[kind=internal] internal.sha512
 --

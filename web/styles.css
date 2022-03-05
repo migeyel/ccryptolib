@@ -91,3 +91,7 @@ pre.highlight.highlight-lua {
     .titlebar { height: 20px; }
     .titlebar-close { font-size: 7px; }
 }
+
+.admonition-heading span {
+    display: none;
+}

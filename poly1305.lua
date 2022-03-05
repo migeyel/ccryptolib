@@ -4,6 +4,7 @@
 --
 
 local expect = require "cc.expect".expect
+local random = require "ccryptolib.random"
 
 local band = bit32.band
 
@@ -132,6 +133,20 @@ function mod.mac(key, message)
     t5 = t5 * 2 ^ -104
 
     return ("<I2I3I3I2I3I3"):pack(t0, t1, t2, t3, t4, t5)
+end
+
+local mac = mod.mac
+
+--- Verifies a Poly1305 tag.
+--
+-- @tparam string key The key used to generate the tag.
+-- @tparam string message The message to authenticate.
+-- @tparam string tag The tag to check.
+-- @treturn boolean Whether the tag is valid or not.
+--
+function mod.verify(key, message, tag)
+    local kaux = random.random(32)
+    return mac(kaux, tag) == mac(kaux, mac(key, message))
 end
 
 return mod

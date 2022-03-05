@@ -1,9 +1,20 @@
+--- The Poly1305 one-time authenticator.
+--
+-- @module poly1305
+--
+
 local expect = require "cc.expect".expect
 
 local band = bit32.band
 
 local mod = {}
 
+--- Computes a Poly1305 message authentication code.
+--
+-- @tparam string key A 32-byte single-use random key.
+-- @tparam string message The message to authenticate.
+-- @treturn string The 16-byte authentication tag.
+--
 function mod.mac(key, message)
     expect(1, key, "string")
     assert(#key == 32, "key length must be 32")

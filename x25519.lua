@@ -1,3 +1,8 @@
+--- The X25519 key exchange scheme.
+--
+-- @module x25519
+--
+
 local expect = require "cc.expect".expect
 local fp     = require "ccryptolib.internal.fp"
 local random = require "ccryptolib.random"
@@ -79,6 +84,11 @@ end
 
 local mod = {}
 
+--- Computes the public key from a secret key.
+--
+-- @tparam string sk A random 32-byte secret key.
+-- @treturn string The matching public key.
+--
 function mod.publicKey(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
@@ -86,6 +96,12 @@ function mod.publicKey(sk)
     return fp.encode(ladder8(fp.num(9), bits(sk)))
 end
 
+--- Performs the key exchange.
+--
+-- @tparam string sk A secret key.
+-- @tparam string pk A public key, usually derived from a second secret key.
+-- @treturn string The 32-byte shared secret between both keys.
+--
 function mod.exchange(sk, pk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")

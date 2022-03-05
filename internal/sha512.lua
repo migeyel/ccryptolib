@@ -1,6 +1,6 @@
 --- The SHA512 cryptographic hash function (unstable, for internal use only).
 --
--- @module internal.sha512
+-- @module[kind=internal] internal.sha512
 --
 
 local expect = require "cc.expect".expect

@@ -20,8 +20,7 @@ local function double(x1, z1)
     return x3, z3
 end
 
--- TODO We can save a multiplication when stepping over G, since dx = 9.
-local function step(dx, x1, z1, x2, z2)
+local function step(dxmul, dx, x1, z1, x2, z2)
     local a = fp.add(x1, z1)
     local aa = fp.square(a)
     local b = fp.sub(x1, z1)
@@ -32,7 +31,7 @@ local function step(dx, x1, z1, x2, z2)
     local da = fp.mul(d, a)
     local cb = fp.mul(c, b)
     local x4 = fp.square(fp.add(da, cb))
-    local z4 = fp.mul(dx, fp.square(fp.sub(da, cb)))
+    local z4 = dxmul(fp.square(fp.sub(da, cb)), dx)
     local x3 = fp.mul(aa, bb)
     local z3 = fp.mul(e, fp.add(bb, fp.kmul(e, 121666)))
     return x3, z3, x4, z4
@@ -59,19 +58,19 @@ local function bits(str)
     return {unpack(out, 4)}
 end
 
-local function ladder8(dx, bits)
+local function ladder8(dxmul, dx, bits)
     local x1 = fp.num(1)
     local z1 = fp.num(0)
 
     local z2 = fp.decode(random.random(32))
-    local x2 = fp.mul(dx, z2)
+    local x2 = dxmul(z2, dx)
 
     -- Standard ladder.
     for i = #bits, 1, -1 do
         if bits[i] == 0 then
-            x1, z1, x2, z2 = step(dx, x1, z1, x2, z2)
+            x1, z1, x2, z2 = step(dxmul, dx, x1, z1, x2, z2)
         else
-            x2, z2, x1, z1 = step(dx, x2, z2, x1, z1)
+            x2, z2, x1, z1 = step(dxmul, dx, x2, z2, x1, z1)
         end
     end
 
@@ -93,7 +92,7 @@ local mod = {}
 function mod.publicKey(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
-    return fp.encode(ladder8(fp.num(9), bits(sk)))
+    return fp.encode(ladder8(fp.kmul, 9, bits(sk)))
 end
 
 --- Performs the key exchange.
@@ -107,7 +106,7 @@ function mod.exchange(sk, pk)
     assert(#sk == 32, "secret key length must be 32")
     expect(2, pk, "string")
     assert(#pk == 32, "public key length must be 32")
-    return fp.encode(ladder8(fp.decode(pk), bits(sk)))
+    return fp.encode(ladder8(fp.mul, fp.decode(pk), bits(sk)))
 end
 
 return mod

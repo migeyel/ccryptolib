@@ -20,6 +20,7 @@ local function double(x1, z1)
     return x3, z3
 end
 
+-- TODO We can save a multiplication when stepping over G, since dx = 9.
 local function step(dx, x1, z1, x2, z2)
     local a = fp.add(x1, z1)
     local aa = fp.square(a)
@@ -92,7 +93,6 @@ local mod = {}
 function mod.publicKey(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
-
     return fp.encode(ladder8(fp.num(9), bits(sk)))
 end
 
@@ -107,7 +107,6 @@ function mod.exchange(sk, pk)
     assert(#sk == 32, "secret key length must be 32")
     expect(2, pk, "string")
     assert(#pk == 32, "public key length must be 32")
-
     return fp.encode(ladder8(fp.decode(pk), bits(sk)))
 end
 

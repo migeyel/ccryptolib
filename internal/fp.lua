@@ -11,9 +11,6 @@
 --
 
 local unpack = unpack or table.unpack
-local bxor = bit32.bxor
-local band = bit32.band
-local bor = bit32.bor
 
 --- The modular square root of -1.
 local I = {
@@ -31,8 +28,8 @@ local I = {
     0712905 * 2 ^ 234,
 }
 
---- The difference between a non-canonical number and its canonical equivalent.
-local CDIFF = {
+--- p itself, 2²⁵⁵ - 19.
+local P = {
     2 ^ 22 - 19,
     (2 ^ 21 - 1) * 2 ^ 22,
     (2 ^ 21 - 1) * 2 ^ 43,
@@ -47,37 +44,10 @@ local CDIFF = {
     (2 ^ 21 - 1) * 2 ^ 234,
 }
 
---- A base field polynomial.
---
--- The Curve25519 paper represents its numbers as "polynomals" that slice the
--- bigint into a little-endian array of floats. Each float slice is such that
--- the (infinite precision) sum of all of them is equal to the represented
--- number.
---
--- For our implementation, we use an array of 12 floats. Each one has a specific
--- exponent and mantissa range.
---
--- A table t is said to be a float array iff it contains numbers at the entries
--- indexed by {1, 2, 3, ..., #t} and nowhere else.
---
--- A float array t is said to be an fp iff #t == 12 and, for i in [0..12),
--- t[i + 1] is an integer multiple of 2 ^ ⌈255 / 12 i⌉.
--- i.e. ∀ i ∊ [0..12) ∃ m ∊ ℤ, t[i + 1] = m ✕ 2 ^ ⌈255 / 12 ✕ i⌉.
---
--- An fp t is said to represent some integer n iff Σ t[i] = n for i ∊ [1..12].
---
--- We say that an fp p is (α, β)-RC (α, β reduced coefficient) for α, β ∊ ℕ iff
--- ∀ i ∊ [0..12), -α ✕ C ≤ p[i + 1] ≤ β ✕ C. Where C = 2 ^ ⌈255 / 12 ✕ (i + 1)⌉
---
--- @type fp
---
-local fp = nil
-if fp ~= nil then return end
-
 --- Converts a Lua number to an element.
 --
 -- @tparam number n A number n in [0..2²²).
--- @treturn fp n as an (0, 1)-RC fp.
+-- @treturn fp1
 --
 local function num(n)
     return {n, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -85,9 +55,9 @@ end
 
 --- Adds two elements.
 --
--- @tparam fp a Some (α₁, β₁)-RC fp.
--- @tparam fp b Some (α₂, β₂)-RC fp.
--- @treturn fp a + b as an (α₁ + α₂, β₁ + β₂)-RC fp.
+-- @tparam fp1 a
+-- @tparam fp1 b
+-- @treturn fp2 a + b.
 --
 local function add(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -108,34 +78,11 @@ local function add(a, b)
     }
 end
 
---- Negates an element.
---
--- @tparam fp a Some (α, β)-RC fp.
--- @treturn fp -a as an (β, α)-RC fp.
---
-local function neg(a)
-    local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
-    return {
-        -a00,
-        -a01,
-        -a02,
-        -a03,
-        -a04,
-        -a05,
-        -a06,
-        -a07,
-        -a08,
-        -a09,
-        -a10,
-        -a11,
-    }
-end
-
 --- Subtracts an element from another.
 --
--- @tparam fp a Some (α₁, β₁)-RC fp.
--- @tparam fp b Some (α₂, β₂)-RC fp.
--- @treturn fp a - b as an (α₁ + β₂, β₁ + α₂)-RC fp.
+-- @tparam fp1 a
+-- @tparam fp1 b
+-- @treturn fp2 a - b.
 --
 local function sub(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -160,56 +107,43 @@ end
 --
 -- Also performs a small reduction modulo p.
 --
--- @tparam fp a Some (0, 4)-RC fp.
--- @treturn fp a' ≡ a (mod p) as an (0, 1)-RC fp.
---
--- TODO See if this works for other (., .)-RC.
+-- @tparam fp2 a
+-- @treturn fp1 a' ≡ a (mod p).
 --
 local function carry(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
-    local r00, r01, r02, r03, r04, r05, r06, r07, r08, r09, r10, r11
+    local c00, c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11
 
-    r11 = a11 % 2 ^ 255
-    a00 = a00 + (a11 - r11) * (19 / 2 ^ 255)
+    c11 = a11 + 3 * 2 ^ 306 - 3 * 2 ^ 306  a00 = a00 + 19 / 2 ^ 255 * c11
 
-    r00 = a00 % 2 ^ 22  a01 = a01 + (a00 - r00)
-    r01 = a01 % 2 ^ 43  a02 = a02 + (a01 - r01)
-    r02 = a02 % 2 ^ 64  a03 = a03 + (a02 - r02)
-    r03 = a03 % 2 ^ 85  a04 = a04 + (a03 - r03)
-    r04 = a04 % 2 ^ 107 a05 = a05 + (a04 - r04)
-    r05 = a05 % 2 ^ 128 a06 = a06 + (a05 - r05)
-    r06 = a06 % 2 ^ 149 a07 = a07 + (a06 - r06)
-    r07 = a07 % 2 ^ 170 a08 = a08 + (a07 - r07)
-    r08 = a08 % 2 ^ 192 a09 = a09 + (a08 - r08)
-    r09 = a09 % 2 ^ 213 a10 = a10 + (a09 - r09)
-    r10 = a10 % 2 ^ 234 a11 = r11 + (a10 - r10)
+    c00 = a00 + 3 * 2 ^ 73  - 3 * 2 ^ 73   a01 = a01 + c00
+    c01 = a01 + 3 * 2 ^ 94  - 3 * 2 ^ 94   a02 = a02 + c01
+    c02 = a02 + 3 * 2 ^ 115 - 3 * 2 ^ 115  a03 = a03 + c02
+    c03 = a03 + 3 * 2 ^ 136 - 3 * 2 ^ 136  a04 = a04 + c03
+    c04 = a04 + 3 * 2 ^ 158 - 3 * 2 ^ 158  a05 = a05 + c04
+    c05 = a05 + 3 * 2 ^ 179 - 3 * 2 ^ 179  a06 = a06 + c05
+    c06 = a06 + 3 * 2 ^ 200 - 3 * 2 ^ 200  a07 = a07 + c06
+    c07 = a07 + 3 * 2 ^ 221 - 3 * 2 ^ 221  a08 = a08 + c07
+    c08 = a08 + 3 * 2 ^ 243 - 3 * 2 ^ 243  a09 = a09 + c08
+    c09 = a09 + 3 * 2 ^ 264 - 3 * 2 ^ 264  a10 = a10 + c09
+    c10 = a10 + 3 * 2 ^ 285 - 3 * 2 ^ 285  a11 = a11 - c11 + c10
 
-    r11 = a11 % 2 ^ 255 r00 = r00 + (a11 - r11) * (19 / 2 ^ 255)
+    c11 = a11 + 3 * 2 ^ 306 - 3 * 2 ^ 306
 
-    return {r00, r01, r02, r03, r04, r05, r06, r07, r08, r09, r10, r11}
-end
-
---- Returns whether the modp number is the canonical representative.
---
--- @see canonicalize
---
--- @tparam fp a Some (0, 1)-RC fp.
--- @treturn boolean Whether a < p.
---
-local function isCanonical(a)
-    local e11 = bxor(a[12] * 2 ^ -234, 2 ^ 21 - 1)
-    local e10 = bxor(a[11] * 2 ^ -213, 2 ^ 21 - 1)
-    local e09 = bxor(a[10] * 2 ^ -192, 2 ^ 21 - 1)
-    local e08 = bxor(a[09] * 2 ^ -170, 2 ^ 22 - 1)
-    local e07 = bxor(a[08] * 2 ^ -149, 2 ^ 21 - 1)
-    local e06 = bxor(a[07] * 2 ^ -128, 2 ^ 21 - 1)
-    local e05 = bxor(a[06] * 2 ^ -107, 2 ^ 21 - 1)
-    local e04 = bxor(a[05] * 2 ^ -85, 2 ^ 22 - 1)
-    local e03 = bxor(a[04] * 2 ^ -64, 2 ^ 21 - 1)
-    local e02 = bxor(a[03] * 2 ^ -43, 2 ^ 21 - 1)
-    local e01 = bxor(a[02] * 2 ^ -22, 2 ^ 21 - 1)
-    local e00 = band(a[01] - (2 ^ 22 - 19), 2 ^ 31)
-    return 0 ~= bor(e00, e01, e02, e03, e04, e05, e06, e07, e08, e09, e10, e11)
+    return {
+        a00 - c00 + 19 / 2 ^ 255 * c11,
+        a01 - c01,
+        a02 - c02,
+        a03 - c03,
+        a04 - c04,
+        a05 - c05,
+        a06 - c06,
+        a07 - c07,
+        a08 - c08,
+        a09 - c09,
+        a10 - c10,
+        a11 - c11,
+    }
 end
 
 --- Returns the canoncal representative of a modp number.
@@ -218,38 +152,65 @@ end
 -- returns the canonical element of the represented equivalence class. We define
 -- an element as canonical if it's the smallest nonnegative number in its class.
 --
--- @tparam fp a Some (0, 1)-RC fp.
--- @treturn fp a mod p as an (0, 1)-RC fp.
+-- @tparam fp2 a
+-- @treturn fp1 A canonical element a' ≡ a (mod p).
 --
 local function canonicalize(a)
-    a = carry(a)
-    local zero = num(0)
-    local diff = isCanonical(a) and zero or CDIFF
-    return sub(a, diff)
+    local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
+    local c00, c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11
+
+    -- Perform an euclidean reduction.
+    -- TODO Range check.
+    c00 = a00 % 2 ^ 22   a01 = a00 - c00 + a01
+    c01 = a01 % 2 ^ 43   a02 = a01 - c01 + a02
+    c02 = a02 % 2 ^ 64   a03 = a02 - c02 + a03
+    c03 = a03 % 2 ^ 85   a04 = a03 - c03 + a04
+    c04 = a04 % 2 ^ 107  a05 = a04 - c04 + a05
+    c05 = a05 % 2 ^ 128  a06 = a05 - c05 + a06
+    c06 = a06 % 2 ^ 149  a07 = a06 - c06 + a07
+    c07 = a07 % 2 ^ 170  a08 = a07 - c07 + a08
+    c08 = a08 % 2 ^ 192  a09 = a08 - c08 + a09
+    c09 = a09 % 2 ^ 213  a10 = a09 - c09 + a10
+    c10 = a10 % 2 ^ 234  a11 = a10 - c10 + a11
+    c11 = a11 % 2 ^ 255  c00 = c00 + 19 / 2 ^ 255 * (a11 - c11)
+
+    -- Canonicalize.
+    if      c11 / 2 ^ 234 == 2 ^ 21 - 1
+        and c10 / 2 ^ 213 == 2 ^ 21 - 1
+        and c09 / 2 ^ 192 == 2 ^ 21 - 1
+        and c08 / 2 ^ 170 == 2 ^ 22 - 1
+        and c07 / 2 ^ 149 == 2 ^ 21 - 1
+        and c06 / 2 ^ 128 == 2 ^ 21 - 1
+        and c05 / 2 ^ 107 == 2 ^ 21 - 1
+        and c04 / 2 ^ 85  == 2 ^ 22 - 1
+        and c03 / 2 ^ 64  == 2 ^ 21 - 1
+        and c02 / 2 ^ 43  == 2 ^ 21 - 1
+        and c01 / 2 ^ 22  == 2 ^ 21 - 1
+        and c00 >= 2 ^ 22 - 19
+    then
+        return {19 - 2 ^ 22 + c00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+    else
+        return {c00, c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11}
+    end
 end
 
 --- Returns whether two elements are the same.
 --
--- @tparam fp a Some (0, 1)-RC fp.
--- @tparam fp b Some (0, 1)-RC fp.
--- @treturn boolean Whether the two polynomials are the same mod p.
+-- @tparam fp1 a
+-- @tparam fp1 b
+-- @treturn boolean Whether the two elements are the same mod p.
 --
 local function eq(a, b)
-    a = canonicalize(a)
-    b = canonicalize(b)
-    for i = 1, 12 do
-        if a[i] ~= b[i] then
-            return false
-        end
-    end
+    local c = canonicalize(sub(a, b))
+    for i = 1, 12 do if c[i] ~= 0 then return false end end
     return true
 end
 
 --- Multiplies two elements.
 --
--- @tparam fp a Some (α₁, β₁)-RC fp.
--- @tparam fp b Some (α₂, β₂)-RC fp with max{α₁ + α₂, β₁ + β₂} ≤ 4.
--- @treturn fp c ≡ a ✕ b (mod p) as an (0, 1)-RC fp.
+-- @tparam fp2 a
+-- @tparam fp2 b
+-- @treturn fp1 c ≡ a ✕ b (mod p).
 --
 local function mul(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -416,30 +377,43 @@ local function mul(a, b)
         + a00 * b11
 
     -- Carry and reduce.
-    a10 = c10 % 2 ^ 234 c11 = c11 + (c10 - a10)
-    a11 = c11 % 2 ^ 255 c00 = c00 + (c11 - a11) * (19 / 2 ^ 255)
+    a10 = c10 + 3 * 2 ^ 285 - 3 * 2 ^ 285  c11 = c11 + a10
+    a11 = c11 + 3 * 2 ^ 306 - 3 * 2 ^ 306  c00 = c00 + 19 / 2 ^ 255 * a11
 
-    a00 = c00 % 2 ^ 22  c01 = c01 + (c00 - a00)
-    a01 = c01 % 2 ^ 43  c02 = c02 + (c01 - a01)
-    a02 = c02 % 2 ^ 64  c03 = c03 + (c02 - a02)
-    a03 = c03 % 2 ^ 85  c04 = c04 + (c03 - a03)
-    a04 = c04 % 2 ^ 107 c05 = c05 + (c04 - a04)
-    a05 = c05 % 2 ^ 128 c06 = c06 + (c05 - a05)
-    a06 = c06 % 2 ^ 149 c07 = c07 + (c06 - a06)
-    a07 = c07 % 2 ^ 170 c08 = c08 + (c07 - a07)
-    a08 = c08 % 2 ^ 192 c09 = c09 + (c08 - a08)
-    a09 = c09 % 2 ^ 213 c10 = a10 + (c09 - a09)
-    a10 = c10 % 2 ^ 234 c11 = a11 + (c10 - a10)
+    a00 = c00 + 3 * 2 ^ 73  - 3 * 2 ^ 73   c01 = c01 + a00
+    a01 = c01 + 3 * 2 ^ 94  - 3 * 2 ^ 94   c02 = c02 + a01
+    a02 = c02 + 3 * 2 ^ 115 - 3 * 2 ^ 115  c03 = c03 + a02
+    a03 = c03 + 3 * 2 ^ 136 - 3 * 2 ^ 136  c04 = c04 + a03
+    a04 = c04 + 3 * 2 ^ 158 - 3 * 2 ^ 158  c05 = c05 + a04
+    a05 = c05 + 3 * 2 ^ 179 - 3 * 2 ^ 179  c06 = c06 + a05
+    a06 = c06 + 3 * 2 ^ 200 - 3 * 2 ^ 200  c07 = c07 + a06
+    a07 = c07 + 3 * 2 ^ 221 - 3 * 2 ^ 221  c08 = c08 + a07
+    a08 = c08 + 3 * 2 ^ 243 - 3 * 2 ^ 243  c09 = c09 + a08
+    a09 = c09 + 3 * 2 ^ 264 - 3 * 2 ^ 264  c10 = c10 - a10 + a09
+    a10 = c10 + 3 * 2 ^ 285 - 3 * 2 ^ 285  c11 = c11 - a11 + a10
 
-    a11 = c11 % 2 ^ 255 a00 = a00 + (c11 - a11) * (19 / 2 ^ 255)
+    a11 = c11 + 3 * 2 ^ 306 - 3 * 2 ^ 306
 
-    return {a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11}
+    return {
+        c00 - a00 + 19 / 2 ^ 255 * a11,
+        c01 - a01,
+        c02 - a02,
+        c03 - a03,
+        c04 - a04,
+        c05 - a05,
+        c06 - a06,
+        c07 - a07,
+        c08 - a08,
+        c09 - a09,
+        c10 - a10,
+        c11 - a11,
+    }
 end
 
 --- Squares an element.
 --
--- @tparam fp a Some (α, β)-RC fp with max{α, β} ≤ 2.
--- @treturn fp c ≡ a² (mod p) as an (0, 1)-RC fp.
+-- @tparam fp2 a
+-- @treturn fp1 c ≡ a² (mod p).
 --
 local function square(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -553,56 +527,100 @@ local function square(a)
         + a06 * d05
 
     -- Carry and reduce.
-    a10 = c10 % 2 ^ 234 c11 = c11 + (c10 - a10)
-    a11 = c11 % 2 ^ 255 c00 = c00 + (c11 - a11) * (19 / 2 ^ 255)
+    a10 = c10 + 3 * 2 ^ 285 - 3 * 2 ^ 285  c11 = c11 + a10
+    a11 = c11 + 3 * 2 ^ 306 - 3 * 2 ^ 306  c00 = c00 + 19 / 2 ^ 255 * a11
 
-    a00 = c00 % 2 ^ 22  c01 = c01 + (c00 - a00)
-    a01 = c01 % 2 ^ 43  c02 = c02 + (c01 - a01)
-    a02 = c02 % 2 ^ 64  c03 = c03 + (c02 - a02)
-    a03 = c03 % 2 ^ 85  c04 = c04 + (c03 - a03)
-    a04 = c04 % 2 ^ 107 c05 = c05 + (c04 - a04)
-    a05 = c05 % 2 ^ 128 c06 = c06 + (c05 - a05)
-    a06 = c06 % 2 ^ 149 c07 = c07 + (c06 - a06)
-    a07 = c07 % 2 ^ 170 c08 = c08 + (c07 - a07)
-    a08 = c08 % 2 ^ 192 c09 = c09 + (c08 - a08)
-    a09 = c09 % 2 ^ 213 c10 = a10 + (c09 - a09)
-    a10 = c10 % 2 ^ 234 c11 = a11 + (c10 - a10)
+    a00 = c00 + 3 * 2 ^ 73  - 3 * 2 ^ 73   c01 = c01 + a00
+    a01 = c01 + 3 * 2 ^ 94  - 3 * 2 ^ 94   c02 = c02 + a01
+    a02 = c02 + 3 * 2 ^ 115 - 3 * 2 ^ 115  c03 = c03 + a02
+    a03 = c03 + 3 * 2 ^ 136 - 3 * 2 ^ 136  c04 = c04 + a03
+    a04 = c04 + 3 * 2 ^ 158 - 3 * 2 ^ 158  c05 = c05 + a04
+    a05 = c05 + 3 * 2 ^ 179 - 3 * 2 ^ 179  c06 = c06 + a05
+    a06 = c06 + 3 * 2 ^ 200 - 3 * 2 ^ 200  c07 = c07 + a06
+    a07 = c07 + 3 * 2 ^ 221 - 3 * 2 ^ 221  c08 = c08 + a07
+    a08 = c08 + 3 * 2 ^ 243 - 3 * 2 ^ 243  c09 = c09 + a08
+    a09 = c09 + 3 * 2 ^ 264 - 3 * 2 ^ 264  c10 = c10 - a10 + a09
+    a10 = c10 + 3 * 2 ^ 285 - 3 * 2 ^ 285  c11 = c11 - a11 + a10
 
-    a11 = c11 % 2 ^ 255 a00 = a00 + (c11 - a11) * (19 / 2 ^ 255)
+    a11 = c11 + 3 * 2 ^ 306 - 3 * 2 ^ 306
 
-    return {a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11}
+    return {
+        c00 - a00 + 19 / 2 ^ 255 * a11,
+        c01 - a01,
+        c02 - a02,
+        c03 - a03,
+        c04 - a04,
+        c05 - a05,
+        c06 - a06,
+        c07 - a07,
+        c08 - a08,
+        c09 - a09,
+        c10 - a10,
+        c11 - a11,
+    }
 end
 
 --- Multiplies an element by a number.
 --
--- @tparam fp Some (0, β)-RC fp.
--- @tparam number k A number k in with 0 ≤ k ≤ 2 ^ ((4 - β) ✕ 21 / 4). -- TODO check constraints.
--- @treturn fp c ≡ a ✕ k (mod p) as an (0, 1)-RC fp.
+-- @tparam fp2 a
+-- @tparam number k A number k in [0..2²²).
+-- @treturn fp1 c ≡ a ✕ k (mod p).
 --
 local function kmul(a, k)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
+    local c00, c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11
 
-    return carry {
-        a00 * k,
-        a01 * k,
-        a02 * k,
-        a03 * k,
-        a04 * k,
-        a05 * k,
-        a06 * k,
-        a07 * k,
-        a08 * k,
-        a09 * k,
-        a10 * k,
-        a11 * k,
+    -- TODO Range check.
+    a00 = a00 * k
+    a01 = a01 * k
+    a02 = a02 * k
+    a03 = a03 * k
+    a04 = a04 * k
+    a05 = a05 * k
+    a06 = a06 * k
+    a07 = a07 * k
+    a08 = a08 * k
+    a09 = a09 * k
+    a10 = a10 * k
+    a11 = a11 * k
+
+    c11 = a11 + 3 * 2 ^ 306 - 3 * 2 ^ 306  a00 = a00 + 19 / 2 ^ 255 * c11
+
+    c00 = a00 + 3 * 2 ^ 73  - 3 * 2 ^ 73   a01 = a01 + c00
+    c01 = a01 + 3 * 2 ^ 94  - 3 * 2 ^ 94   a02 = a02 + c01
+    c02 = a02 + 3 * 2 ^ 115 - 3 * 2 ^ 115  a03 = a03 + c02
+    c03 = a03 + 3 * 2 ^ 136 - 3 * 2 ^ 136  a04 = a04 + c03
+    c04 = a04 + 3 * 2 ^ 158 - 3 * 2 ^ 158  a05 = a05 + c04
+    c05 = a05 + 3 * 2 ^ 179 - 3 * 2 ^ 179  a06 = a06 + c05
+    c06 = a06 + 3 * 2 ^ 200 - 3 * 2 ^ 200  a07 = a07 + c06
+    c07 = a07 + 3 * 2 ^ 221 - 3 * 2 ^ 221  a08 = a08 + c07
+    c08 = a08 + 3 * 2 ^ 243 - 3 * 2 ^ 243  a09 = a09 + c08
+    c09 = a09 + 3 * 2 ^ 264 - 3 * 2 ^ 264  a10 = a10 + c09
+    c10 = a10 + 3 * 2 ^ 285 - 3 * 2 ^ 285  a11 = a11 - c11 + c10
+
+    c11 = a11 + 3 * 2 ^ 306 - 3 * 2 ^ 306
+
+    return {
+        a00 - c00 + 19 / 2 ^ 255 * c11,
+        a01 - c01,
+        a02 - c02,
+        a03 - c03,
+        a04 - c04,
+        a05 - c05,
+        a06 - c06,
+        a07 - c07,
+        a08 - c08,
+        a09 - c09,
+        a10 - c10,
+        a11 - c11
     }
 end
 
---- Squares a modp number n times.
+--- Squares an element n times.
 --
--- @tparam fp a Some (α, β)-RC fp with max{α, β} ≤ 2.
+-- @tparam fp2 a
 -- @tparam number n A positive integer.
--- @treturn fp c ≡ a ^ (2 ^ n) (mod q) as an (0, 1)-RC fp.
+-- @treturn fp1 c ≡ a ^ 2 ^ n (mod p).
 --
 local function nsquare(a, n)
     for _ = 1, n do a = square(a) end
@@ -611,11 +629,11 @@ end
 
 --- Computes the inverse of an element.
 --
--- Computation of the inverse requires 11 multiplicationss and 252 squarings.
+-- Computation of the inverse requires 11 multiplications and 252 squarings.
 --
--- @tparam fp a Some (α, β)-RC fp with max{α, β} ≤ 2.
--- @treturn[1] fp c ≡ a⁻¹ (mod p) as an (0, 1)-RC fp, if a ≠ 0.
--- @treturn[2] fp c ≡ 0 (mod p) as an (0, 1)-RC fp, if a = 0.
+-- @tparam fp2 a
+-- @treturn[1] fp1 c ≡ a⁻¹ (mod p), if a ≠ 0.
+-- @treturn[2] fp1 c ≡ 0 (mod p), if a = 0.
 --
 local function invert(a)
     local a2 = square(a)
@@ -638,9 +656,9 @@ end
 --
 -- Note that when v = 0, the returned element can take any value.
 --
--- @tparam fp u Some (0, 4)-RC fp.
--- @tparam fp v Some (α, β)-RC fp with max{α, β} ≤ 2.
--- @treturn[1] fp x as an (0, 1)-RC fp.
+-- @tparam fp2 u
+-- @tparam fp2 v
+-- @treturn[1] fp1 x.
 -- @treturn[2] nil if there is no solution.
 --
 local function sqrtDiv(u, v)
@@ -685,7 +703,7 @@ end
 
 --- Encodes an element in little-endian.
 --
--- @tparam fp a Some (0, 1)-RC fp.
+-- @tparam fp2 a
 -- @treturn string A 32-byte string. Always represents the canonical element.
 --
 local function encode(a)
@@ -722,7 +740,7 @@ end
 --- Decodes an element in little-endian.
 --
 -- @tparam string b A 32-byte string. The most-significant bit is discarded.
--- @treturn fp The decoded element as an (0, 1)-RC fp. May not be canonical.
+-- @treturn fp1 The decoded element. May not be canonical.
 --
 local function decode(b)
     local w00, w01, w02, w03, w04, w05, w06, w07, w08, w09, w10, w11 =
@@ -747,9 +765,9 @@ local function decode(b)
 end
 
 return {
+    P = P,
     num = num,
     add = add,
-    neg = neg,
     sub = sub,
     kmul = kmul,
     mul = mul,

@@ -18,17 +18,20 @@ local O = {fp.num(0), fp.num(1), fp.num(1), fp.num(0)}
 local G = nil
 
 local function double(P1)
+    -- Unsoundness: fp.sub(g, e), and fp.sub(d, i) break fp.sub's contract since
+    -- it doesn't accept an fp2. Although not ideal, in practice this doesn't
+    -- matter since fp.carry handles the larger sum.
     local P1x, P1y, P1z = unpack(P1)
     local a = fp.square(P1x)
     local b = fp.square(P1y)
     local c = fp.square(P1z)
-    local d = fp.kmul(c, 2)
+    local d = fp.add(c, c)
     local e = fp.add(a, b)
     local f = fp.add(P1x, P1y)
     local g = fp.square(f)
-    local h = fp.sub(g, e)
+    local h = fp.carry(fp.sub(g, e))
     local i = fp.sub(b, a)
-    local j = fp.sub(d, i)
+    local j = fp.carry(fp.sub(d, i))
     local P3x = fp.mul(h, j)
     local P3y = fp.mul(i, e)
     local P3z = fp.mul(j, i)
@@ -112,8 +115,7 @@ local function decode(str)
     if not P3x then return nil end
     local xBit = fp.canonicalize(P3x)[1] % 2
     if xBit ~= bit32.extract(str:byte(-1), 7) then
-        P3x = fp.neg(P3x)
-        P3x = fp.carry(P3x)
+        P3x = fp.carry(fp.sub(fp.P, P3x))
     end
     local P3z = fp.num(1)
     local P3t = fp.mul(P3x, P3y)

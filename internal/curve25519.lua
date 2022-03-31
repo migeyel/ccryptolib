@@ -13,9 +13,8 @@
 local fp     = require "ccryptolib.internal.fp"
 local random = require "ccryptolib.random"
 
-local unpack = unpack or table.unpack
-
-local function double(x1, z1)
+local function double(P1)
+    local x1, z1 = P1[1], P1[2]
     local a = fp.add(x1, z1)
     local aa = fp.square(a)
     local b = fp.sub(x1, z1)
@@ -23,10 +22,12 @@ local function double(x1, z1)
     local c = fp.sub(aa, bb)
     local x3 = fp.mul(aa, bb)
     local z3 = fp.mul(c, fp.add(bb, fp.kmul(c, 121666)))
-    return x3, z3
+    return {x3, z3}
 end
 
-local function step(dxmul, dx, x1, z1, x2, z2)
+local function step(dxmul, dx, P1, P2)
+    local x1, z1 = P1[1], P1[2]
+    local x2, z2 = P2[1], P2[2]
     local a = fp.add(x1, z1)
     local aa = fp.square(a)
     local b = fp.sub(x1, z1)
@@ -40,7 +41,7 @@ local function step(dxmul, dx, x1, z1, x2, z2)
     local z4 = dxmul(fp.square(fp.sub(da, cb)), dx)
     local x3 = fp.mul(aa, bb)
     local z3 = fp.mul(e, fp.add(bb, fp.kmul(e, 121666)))
-    return x3, z3, x4, z4
+    return {x3, z3}, {x4, z4}
 end
 
 --- Performs a Montgomery ladder operation with multiplication by 8.
@@ -52,27 +53,22 @@ end
 -- bits.
 --
 local function ladder8(dxmul, dx, bits)
-    local x1 = fp.num(1)
-    local z1 = fp.num(0)
-
-    local z2 = fp.decode(random.random(32))
-    local x2 = dxmul(z2, dx)
+    local P = {fp.num(1), fp.num(0)}
+    local Q = {fp.decode(random.random(32)), dxmul(z2, dx)}
 
     -- Standard ladder.
     for i = #bits, 1, -1 do
         if bits[i] == 0 then
-            x1, z1, x2, z2 = step(dxmul, dx, x1, z1, x2, z2)
+            P, Q = step(dxmul, dx, P, Q)
         else
-            x2, z2, x1, z1 = step(dxmul, dx, x2, z2, x1, z1)
+            Q, P = step(dxmul, dx, Q, P)
         end
     end
 
     -- Multiply by 8 (double 3 times).
-    for _ = 1, 3 do
-        x1, z1 = double(x1, z1)
-    end
+    for _ = 1, 3 do P = double(P) end
 
-    return fp.mul(x1, fp.invert(z1))
+    return fp.mul(P[1], fp.invert(P[2]))
 end
 
 return {

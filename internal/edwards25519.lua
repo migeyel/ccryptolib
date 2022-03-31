@@ -20,6 +20,11 @@ local K = fp.kmul(D, 2)
 local O = {fp.num(0), fp.num(1), fp.num(1), fp.num(0)}
 local G = nil
 
+--- Doubles a point.
+--
+-- @tparam point P1 The point to double.
+-- @treturn point Twice P1.
+--
 local function double(P1)
     -- Unsoundness: fp.sub(g, e), and fp.sub(d, i) break fp.sub's contract since
     -- it doesn't accept an fp2. Although not ideal, in practice this doesn't
@@ -42,6 +47,12 @@ local function double(P1)
     return {P3x, P3y, P3z, P3t}
 end
 
+--- Adds two points.
+--
+-- @tparam point P1 The first summand point.
+-- @tparam niels N1 The second summand point, in Niels form. See @{niels}.
+-- @treturn point The sum.
+--
 local function add(P1, N1)
     local P1x, P1y, P1z, P1t = unpack(P1)
     local N1p, N1m, N1z, N1t = unpack(N1)
@@ -82,6 +93,11 @@ local function sub(P1, N1)
     return {P3x, P3y, P3z, P3t}
 end
 
+--- Computes the Niels representation of a point.
+--
+-- @tparam point P1
+-- @treturn niels P1's Niels representation.
+--
 local function niels(P1)
     local P1x, P1y, P1z, P1t = unpack(P1)
     local N3p = fp.add(P1y, P1x)
@@ -101,13 +117,25 @@ local function scale(P1)
     return {P3x, P3y, P3z, P3t}
 end
 
+--- Encodes a point.
+--
+-- @tparam point P1 The scaled point to encode.
+-- @treturn string The 32-byte encoded point.
+--
 local function encode(P1)
+    P1 = scale(P1)
     local P1x, P1y = unpack(P1)
     local y = fp.encode(P1y)
     local xBit = fp.canonicalize(P1x)[1] % 2
     return y:sub(1, -2) .. string.char(y:byte(-1) + xBit * 128)
 end
 
+--- Decodes a point.
+--
+-- @tparam string str A 32-byte encoded point.
+-- @treturn[1] point The decoded point.
+-- @treturn[2] nil If the string did not represent a valid encoded point.
+--
 local function decode(str)
     local P3y = fp.decode(str)
     local a = fp.square(P3y)
@@ -201,6 +229,11 @@ local function WNAFTable(P, w)
     return out
 end
 
+--- Performs a scalar multiplication by the base point G.
+--
+-- @tparam {number...} bits The scalar multiplier, in little-endian bits.
+-- @treturn point The product.
+--
 local function mulG(bits)
     local sw = signedRadixW(bits, G_W)
     local R = O
@@ -215,6 +248,12 @@ local function mulG(bits)
     return R
 end
 
+--- Performs a scalar multiplication operation.
+--
+-- @tparam point P The base point.
+-- @tparam {number...} bits The scalar multiplier, in little-endian bits.
+-- @treturn point The product.
+--
 local function mul(P, bits)
     local naf = WNAF(bits, 5)
     local tbl = WNAFTable(P, 5)
@@ -236,7 +275,6 @@ return {
     double = double,
     add = add,
     niels = niels,
-    scale = scale,
     encode = encode,
     decode = decode,
     mulG = mulG,

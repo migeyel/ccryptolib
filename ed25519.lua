@@ -23,7 +23,7 @@ function mod.publicKey(sk)
     local h = sha512.digest(sk)
     local x = fq.decodeClamped(h:sub(1, 32))
 
-    return ed.encode(ed.scale(ed.mulG(fq.bits(x))))
+    return ed.encode(ed.mulG(fq.bits(x)))
 end
 
 --- Signs a message.
@@ -47,7 +47,7 @@ function mod.sign(sk, pk, msg)
     -- Commitment.
     local k = fq.decodeWide(random.random(64))
     local r = ed.mulG(fq.bits(k))
-    local rStr = ed.encode(ed.scale(r))
+    local rStr = ed.encode(r)
 
     -- Challenge.
     local e = fq.decodeWide(sha512.digest(rStr .. pk .. msg))
@@ -86,7 +86,7 @@ function mod.verify(pk, msg, sig)
     local ye = ed.mul(y, fq.bits(e))
     local rv = ed.add(gs, ed.niels(ye))
 
-    return ed.encode(ed.scale(rv)) == rStr
+    return ed.encode(rv) == rStr
 end
 
 return mod

@@ -43,27 +43,14 @@ local function step(dxmul, dx, x1, z1, x2, z2)
     return x3, z3, x4, z4
 end
 
-local function bits(str)
-    -- Decode.
-    local bytes = {str:byte(1, 32)}
-    local out = {}
-    for i = 1, 32 do
-        local byte = bytes[i]
-        for j = -7, 0 do
-            local bit = byte % 2
-            out[8 * i + j] = bit
-            byte = (byte - bit) / 2
-        end
-    end
-
-    -- Clamp.
-    out[256] = 0
-    out[255] = 1
-
-    -- We remove the 3 lowest bits since the ladder already multiplies by 8.
-    return {unpack(out, 4)}
-end
-
+--- Performs a Montgomery ladder operation with multiplication by 8.
+--
+-- @tparam function(a:internal.fp.fp1, dx:any):internal.fp.fpq dxmul A function
+-- to multiply an element in Fp by dx.
+-- @tparam any dx The base point's x coordinate. Z is assumed to be equal to 1.
+-- @tparam {number...} bits The multiplier scalar divided by 8, in little-endian
+-- bits.
+--
 local function ladder8(dxmul, dx, bits)
     local x1 = fp.num(1)
     local z1 = fp.num(0)
@@ -89,7 +76,5 @@ local function ladder8(dxmul, dx, bits)
 end
 
 return {
-    double = double,
-    bits = bits,
     ladder8 = ladder8,
 }

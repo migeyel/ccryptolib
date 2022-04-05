@@ -28,22 +28,6 @@ local I = {
     0712905 * 2 ^ 234,
 }
 
---- p itself, 2²⁵⁵ - 19.
-local P = {
-    2 ^ 22 - 19,
-    (2 ^ 21 - 1) * 2 ^ 22,
-    (2 ^ 21 - 1) * 2 ^ 43,
-    (2 ^ 21 - 1) * 2 ^ 64,
-    (2 ^ 22 - 1) * 2 ^ 85,
-    (2 ^ 21 - 1) * 2 ^ 107,
-    (2 ^ 21 - 1) * 2 ^ 128,
-    (2 ^ 21 - 1) * 2 ^ 149,
-    (2 ^ 22 - 1) * 2 ^ 170,
-    (2 ^ 21 - 1) * 2 ^ 192,
-    (2 ^ 21 - 1) * 2 ^ 213,
-    (2 ^ 21 - 1) * 2 ^ 234,
-}
-
 --- Converts a Lua number to an element.
 --
 -- @tparam number n A number n in [0..2²²).
@@ -51,6 +35,29 @@ local P = {
 --
 local function num(n)
     return {n, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+end
+
+--- Negates an element.
+--
+-- @tparam fp1 a
+-- @treturn fp1 -a.
+--
+local function neg(a)
+    local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
+    return {
+        -a00,
+        -a01,
+        -a02,
+        -a03,
+        -a04,
+        -a05,
+        -a06,
+        -a07,
+        -a08,
+        -a09,
+        -a10,
+        -a11,
+    }
 end
 
 --- Adds two elements.
@@ -765,8 +772,8 @@ local function decode(b)
 end
 
 return {
-    P = P,
     num = num,
+    neg = neg,
     add = add,
     sub = sub,
     kmul = kmul,

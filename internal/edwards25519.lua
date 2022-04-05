@@ -146,7 +146,7 @@ local function decode(str)
     if not P3x then return nil end
     local xBit = fp.canonicalize(P3x)[1] % 2
     if xBit ~= bit32.extract(str:byte(-1), 7) then
-        P3x = fp.carry(fp.sub(fp.P, P3x))
+        P3x = fp.carry(fp.neg(P3x))
     end
     local P3z = fp.num(1)
     local P3t = fp.mul(P3x, P3y)

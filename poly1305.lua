@@ -106,16 +106,16 @@ function mod.mac(key, message)
     c1 = h0 - c0 + c1
 
     -- Canonicalize.
-    if      c7 == 0xffff * 2 ^ 112
+    if      c7 == 0x3ffff * 2 ^ 112
         and c6 == 0xffff * 2 ^ 96
         and c5 == 0xffff * 2 ^ 80
         and c4 == 0xffff * 2 ^ 64
         and c3 == 0xffff * 2 ^ 48
         and c2 == 0xffff * 2 ^ 32
         and c1 == 0xffff * 2 ^ 16
-        and c0 >= 0xfffa
+        and c0 >= 0xfffb
     then
-        c7, c6, c5, c4, c3, c2, c1, c0 = 0, 0, 0, 0, 0, 0, 0, c0 - 0xfffa
+        c7, c6, c5, c4, c3, c2, c1, c0 = 0, 0, 0, 0, 0, 0, 0, c0 - 0xfffb
     end
 
     -- Decode s.

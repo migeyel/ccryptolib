@@ -210,7 +210,7 @@ end
 --
 -- @tparam fp2 a
 -- @tparam fp2 b
--- @treturn fp1 c ≡ a ✕ b (mod p).
+-- @treturn fp1 c ≡ a × b (mod p).
 --
 local function mul(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -564,7 +564,7 @@ end
 --
 -- @tparam fp2 a
 -- @tparam number k A number k in [0..2²²).
--- @treturn fp1 c ≡ a ✕ k (mod p).
+-- @treturn fp1 c ≡ a × k (mod p).
 --
 local function kmul(a, k)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)

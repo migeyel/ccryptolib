@@ -178,7 +178,7 @@ end
 
 local function radixWTable(P, w)
     local out = {}
-    for i = 1, 255 / w do
+    for i = 1, math.ceil(255 / w) do
         local row = {niels(P)}
         for j = 2, 2 ^ w / 2 do
             P = add(P, row[1])

@@ -10,7 +10,7 @@
 -- @module[kind=internal] internal.fq
 --
 
-local mp   = require "ccrytpolib.internal.mp"
+local mp   = require "ccryptolib.internal.mp"
 local util = require "ccryptolib.internal.util"
 
 local unpack = unpack or table.unpack
@@ -60,30 +60,22 @@ local T1 = {
     00000283,
 }
 
+local ZERO = mp.num(0)
+
 --- Reduces a number modulo q.
 --
--- @tparam {number...} a A number a < 2q as 12 limbs in [0..2²⁴).
+-- @tparam {number...} a A number a < 2q as 11 limbs in [0..2²⁵).
 -- @treturn {number...} a mod q as 11 limbs in [0..2²⁴).
 --
 local function reduce(a)
-    local c = {unpack(a, 1, 11)} -- a < 2q implies that a[12] = 0.
+    local c = mp.sub(a, Q)
 
-    -- Return c if c < r.
-    for i = 11, 1, -1 do
-        if c[i] < Q[i] then
-            return c
-        elseif c[i] > Q[i] then
-            break
-        end
-    end
-
-    for i = 1, 11 do
-        c[i] = c[i] - Q[i]
-    end
+    -- Return carry(a) if a < q.
+    if mp.approx(c) < 0 then return mp.carry(a) end
 
     -- c >= q means c - q >= 0.
-    -- Since q < 2²⁸⁸, c < 2q means c - q < q < 2²⁸⁸ = 2^(24 × (11 + 1)).
-    -- c's limbs fit in [-2²⁵..2²⁵], since subtraction adds at most one bit.
+    -- Since q < 2²⁸⁸, c < 2q means c - q < q < 2²⁸⁸.
+    -- c's limbs fit in (-2²⁶..2²⁶), since subtraction adds at most one bit.
     local cc = mp.carry(c)
     cc[12] = nil -- cc < q implies that cc[12] = 0.
     return cc
@@ -108,29 +100,20 @@ end
 -- @treturn {number...} -a mod q as 11 limbs in [0..2²⁴).
 --
 local function neg(a)
-    local c = {}
-    for i = 1, 11 do
-        c[i] = Q[i] - a[i]
-    end
-
-    -- 0 < c < q implies 0 < q - c < q < 2²⁸⁸ = 2^(24 × (11 + 1)).
-    -- c's limbs fit in [-2²⁵..2²⁵], since subtraction adds at most one bit.
-    -- q - c < q also implies q - c < 2q.
-    return reduce(mp.carry(c))
+    return reduce(mp.sub(Q, a))
 end
 
---- Given a scalar a, computes 2⁻²⁶⁴ a mod q.
+--- Given two scalars a and b, computes 2⁻²⁶⁴ × a × b mod q.
 --
--- @tparam {number...} a A number a < 2²⁶⁴ × q as 22 limbs in [0..2²⁴).
--- @treturn {number...} 2⁻²⁶⁴ × a mod q as 11 limbs in [0..2²⁴).
+-- @tparam {number...} a A number a as 11 limbs in [0..2²⁴).
+-- @tparam {number...} b A number b < q as 11 limbs in [0..2²⁴).
+-- @treturn 2⁻²⁶⁴ × a × b mod q as 11 limbs in [0..2²⁴).
 --
-local function redc(a)
-    local al = {unpack(a, 1, 11)}
-    local mm = mp.mul(al, T0)
-    local m = {unpack(mm, 1, 11)}
-    local mr = mp.mul(m, Q)
-    local t = mp.add(a, mr)
-    return reduce({unpack(t, 12, 23)})
+local function mul(a, b)
+    local t0, t1 = mp.mul(a, b)
+    local mq0, mq1 = mp.mul(mp.lmul(t0, T0), Q)
+    local _, s1 = mp.dwadd(t0, t1, mq0, mq1)
+    return reduce(s1)
 end
 
 --- Converts a scalar into Montgomery form.
@@ -139,8 +122,8 @@ end
 -- @treturn {number...} 2²⁶⁴ × a mod q as 11 limbs in [0..2²⁴).
 --
 local function montgomery(a)
-    -- a < 2²⁶⁴ and T1 < q imply that a × T1 < 2²⁶⁴ × q.
-    return redc(mp.mul(a, T1))
+    -- 0 ≤ a < 2²⁶⁴ and 0 ≤ T1 < q.
+    return mul(a, T1)
 end
 
 --- Converts a scalar from Montgomery form.
@@ -149,10 +132,10 @@ end
 -- @treturn {number...} 2⁻²⁶⁴ × a mod q as 11 limbs in [0..2²⁴).
 --
 local function demontgomery(a)
-    a = {unpack(a)}
-    for i = 12, 22 do a[i] = 0 end
-    -- a < q < 2²⁶⁴ × q.
-    return redc(a)
+    -- It's REDC all over again except b is 1.
+    local mq0, mq1 = mp.mul(mp.lmul(a, T0), Q)
+    local _, s1 = mp.dwadd(a, ZERO, mq0, mq1)
+    return reduce(s1)
 end
 
 --- Converts a Lua number to a scalar.
@@ -162,17 +145,6 @@ end
 --
 local function num(n)
     return montgomery({n, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-end
-
---- Multiplies two scalars mod q.
---
--- @tparam {number...} a 2²⁶⁴ × a' mod q as 11 limbs in [0..2²⁴).
--- @tparam {number...} b 2²⁶⁴ × b' mod q as 11 limbs in [0..2²⁴).
--- @treturn {number...} 2²⁶⁴ × a' × b' mod q as 11 limbs in [0..2²⁴).
---
-local function mul(a, b)
-    -- {a, b} < q so a × b < q² < 2²⁶⁴ × q.
-    return redc(mp.mul(a, b))
 end
 
 --- Encodes a scalar.

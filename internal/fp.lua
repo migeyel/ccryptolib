@@ -771,6 +771,18 @@ local function decode(b)
     }
 end
 
+--- Checks if two elements are equal.
+--
+-- @tparam fp2 a
+-- @treturn boolean Whether a ≡ 0 (mod p).
+--
+local function eqz(a)
+    local c = canonicalize(a)
+    local c00, c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11 = unpack(c)
+    return c00 + c01 + c02 + c03 + c04 + c05 + c06 + c07 + c08 + c09 + c10 + c11
+        == 0
+end
+
 return {
     num = num,
     neg = neg,
@@ -785,4 +797,5 @@ return {
     sqrtDiv = sqrtDiv,
     encode = encode,
     decode = decode,
+    eqz = eqz,
 }

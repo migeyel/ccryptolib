@@ -4,30 +4,8 @@
 --
 
 local expect = require "cc.expect".expect
-local fp     = require "ccryptolib.internal.fp"
-local mont   = require "ccryptolib.internal.curve25519"
-
--- TODO This function feels out of place anywhere I try putting it on.
-local function bits(str)
-    -- Decode.
-    local bytes = {str:byte(1, 32)}
-    local out = {}
-    for i = 1, 32 do
-        local byte = bytes[i]
-        for j = -7, 0 do
-            local bit = byte % 2
-            out[8 * i + j] = bit
-            byte = (byte - bit) / 2
-        end
-    end
-
-    -- Clamp.
-    out[256] = 0
-    out[255] = 1
-
-    -- We remove the 3 lowest bits since the ladder already multiplies by 8.
-    return {unpack(out, 4)}
-end
+local util   = require "ccryptolib.internal.util"
+local c25    = require "ccryptolib.internal.curve25519"
 
 local mod = {}
 
@@ -39,7 +17,7 @@ local mod = {}
 function mod.publicKey(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
-    return fp.encode(mont.ladder8(fp.kmul, 9, bits(sk)))
+    return c25.encode(c25.scale(c25.mulG(util.bits(sk))))
 end
 
 --- Performs the key exchange.
@@ -53,7 +31,7 @@ function mod.exchange(sk, pk)
     assert(#sk == 32, "secret key length must be 32")
     expect(2, pk, "string")
     assert(#pk == 32, "public key length must be 32")
-    return fp.encode(mont.ladder8(fp.mul, fp.decode(pk), bits(sk)))
+    return c25.encode(c25.scale(c25.ladder8(c25.decode(pk), util.bits8(sk))))
 end
 
 return mod

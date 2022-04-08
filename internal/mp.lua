@@ -209,13 +209,13 @@ end
 --- Computes half of a number.
 --
 -- @tparam {number...} a An even positive integer as 11 limbs in (-2²⁴..2²⁴).
--- @treturn {number...} a ÷ 2 as 11 limbs in (-2⁴⁷..2⁴⁷).
+-- @treturn {number...} a ÷ 2 as 11 limbs in (-2²⁴..2²⁴).
 --
 local function half(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
 
-    return {
-        a00 + a01 * 2 ^ 23,
+    local out = carryWeak {
+        a00 * 0.5 + a01 * 2 ^ 23,
         a02 * 2 ^ 23,
         a03 * 2 ^ 23,
         a04 * 2 ^ 23,
@@ -227,6 +227,10 @@ local function half(a)
         a10 * 2 ^ 23,
         0,
     }
+
+    out[12] = nil
+
+    return out
 end
 
 --- Computes a third of a number.

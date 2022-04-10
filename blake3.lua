@@ -118,89 +118,163 @@ local function merge(cvl, cvr)
     return cvl
 end
 
-local function blake3(iv, flags, msg, len)
-    -- Set up the state.
-    local stateCvs = {}
-    local stateCv = iv
-    local stateT = 0
-    local stateN = 0
-    local stateStart = CHUNK_START
-    local stateEnd = 0
+local function update(state, message)
+    expect(1, state, "table")
+    expect(1, message, "string")
+
+    -- Append to buffer.
+    state.m = state.m .. message
+
+    -- Split off complete blocks.
+    local blockslen = #state.m - (#state.m - 1) % 64 - 1
+    local blocks = state.m:sub(1, blockslen)
+    state.m = state.m:sub(1 + blockslen)
 
     -- Digest complete blocks.
-    for i = 1, #msg - 64, 64 do
+    for i = 1, #blocks, 64 do
         -- Compress the block.
-        local block = {("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):unpack(msg, i)}
-        local stateFlags = flags + stateStart + stateEnd
-        stateCv = compress(stateCv, block, stateT, 64, stateFlags)
-        stateStart = 0
-        stateN = stateN + 1
+        local block = {("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):unpack(blocks, i)}
+        local stateFlags = state.f + state.s + state.e
+        state.cv = compress(state.cv, block, state.t, 64, stateFlags)
+        state.s = 0
+        state.n = state.n + 1
 
-        if stateN == 15 then
+        if state.n == 15 then
             -- Last block in chunk.
-            stateEnd = CHUNK_END
-        elseif stateN == 16 then
+            state.e = CHUNK_END
+        elseif state.n == 16 then
             -- Chunk complete, merge.
-            local mergeCv = stateCv
-            local mergeAmt = stateT + 1
+            local mergeCv = state.cv
+            local mergeAmt = state.t + 1
             while mergeAmt % 2 == 0 do
-                local block = merge(table.remove(stateCvs), mergeCv)
-                mergeCv = compress(iv, block, 0, 64, flags + PARENT)
+                local block = merge(table.remove(state.cvs), mergeCv)
+                mergeCv = compress(state.iv, block, 0, 64, state.f + PARENT)
                 mergeAmt = mergeAmt / 2
             end
 
             -- Push back.
-            table.insert(stateCvs, mergeCv)
+            table.insert(state.cvs, mergeCv)
 
             -- Update state back to next chunk.
-            stateCv = iv
-            stateT = stateT + 1
-            stateN = 0
-            stateStart = CHUNK_START
-            stateEnd = 0
+            state.cv = state.iv
+            state.t = state.t + 1
+            state.n = 0
+            state.s = CHUNK_START
+            state.e = 0
         end
     end
 
+    return state
+end
+
+local function finalize(state)
     -- Pad the last message block.
-    local lastLen = #msg == 0 and 0 or (#msg - 1) % 64 + 1
-    local padded = msg:sub(-lastLen) .. ("\0"):rep(64)
+    local lastLen = #state.m
+    local padded = state.m .. ("\0"):rep(64)
     local last = {("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):unpack(padded)}
 
     -- Prepare output expansion state.
-    local outCv, outBlock, outLen, outFlags
-    if stateT > 0 then
+    if state.t > 0 then
         -- Root is a parent, digest last block now and merge parents.
-        local stateFlags = flags + stateStart + CHUNK_END
-        local mergeCv = compress(stateCv, last, stateT, lastLen, stateFlags)
-        for i = #stateCvs, 2, -1 do
-            local block = merge(stateCvs[i], mergeCv)
-            mergeCv = compress(iv, block, 0, 64, flags + PARENT)
+        local stateFlags = state.f + state.s + CHUNK_END
+        local mergeCv = compress(state.cv, last, state.t, lastLen, stateFlags)
+        for i = #state.cvs, 2, -1 do
+            local block = merge({unpack(state.cvs[i])}, mergeCv)
+            mergeCv = compress(state.iv, block, 0, 64, state.f + PARENT)
         end
 
         -- Set output state.
-        outCv = iv
-        outBlock = merge(stateCvs[1], mergeCv)
-        outLen = 64
-        outFlags = flags + ROOT + PARENT
+        return {
+            expand = expand,
+            cv = {unpack(state.iv)},
+            m = merge({unpack(state.cvs[1])}, mergeCv),
+            n = 64,
+            f = state.f + ROOT + PARENT,
+        }
     else
-        -- Root block is in the first chunk, set output state.
-        outCv = stateCv
-        outBlock = last
-        outLen = lastLen
-        outFlags = flags + stateStart + CHUNK_END + ROOT
+        -- Root is in the first chunk, set output state.
+        return {
+            expand = expand,
+            cv = {unpack(state.cv)},
+            m = last,
+            n = lastLen,
+            f = state.f + state.s + CHUNK_END + ROOT,
+        }
     end
+end
+
+local function expand(out, len, offset)
+    expect(1, out, "table")
+    expect(1, len, "number")
+    expect(2, offset, "nil", "number")
+    offset = offset or 0
 
     -- Expand output.
     local out = {}
     for i = 0, len / 64 do
-        local md = compress(outCv, outBlock, i, outLen, outFlags, true)
+        local n = offset + i
+        local md = compress(out.cv, out.m, n, out.n, out.f, true)
         out[i + 1] = ("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):pack(unpack(md))
     end
 
     return table.concat(out):sub(1, len)
 end
 
+local function copy(state)
+    -- Copy CV stack.
+    local cvs = {}
+    for i = 1, #state.cvs do cvs[i] = {unpack(state.cvs[i])} end
+
+    return {
+        update = update,
+        finalize = finalize,
+        copy = copy,
+        iv = {unpack(state.iv)},
+        cv = {unpack(state.cv)},
+        cvs = cvs,
+        m = state.m,
+        t = state.t,
+        n = state.n,
+        s = state.s,
+        e = state.e,
+        f = state.f,
+    }
+end
+
+local function new(iv, f)
+    return {
+        update = update,
+        finalize = finalize,
+        copy = copy,
+        iv = iv,
+        cv = iv,
+        cvs = {},
+        m = "",
+        t = 0,
+        n = 0,
+        s = CHUNK_START,
+        e = 0,
+        f = f,
+    }
+end
+
 local mod = {}
+
+function mod.new()
+    return new({unpack(IV)}, 0)
+end
+
+function mod.newKeyed(key)
+    expect(1, key, "string")
+    assert(#key == 32, "key length must be 32")
+    return new({("<I4I4I4I4I4I4I4I4"):unpack(key)}, KEYED_HASH)
+end
+
+function mod.newDk(context)
+    expect(1, context, "string")
+    local iv = new(IV, DERIVE_KEY_CONTEXT):update(context):finalize():expand(32)
+    return new({("<I4I4I4I4I4I4I4I4"):unpack(iv)}, DERIVE_KEY_MATERIAL)
+end
 
 --- Hashes data using BLAKE3.
 --
@@ -213,8 +287,7 @@ function mod.digest(message, len)
     expect(2, len, "number", "nil")
     len = len or 32
     assert(len % 1 == 0 and len >= 1, "length must be a positive integer")
-
-    return blake3(IV, 0, message, len)
+    return new(IV, 0):update(message):finalize():expand(len)
 end
 
 --- Performs a keyed hash.
@@ -231,8 +304,8 @@ function mod.digestKeyed(key, message, len)
     expect(3, len, "number", "nil")
     len = len or 32
     assert(len % 1 == 0 and len >= 1, "length must be a positive integer")
-
-    return blake3({("<I4I4I4I4I4I4I4I4"):unpack(key)}, KEYED_HASH, message, len)
+    local h = new({("<I4I4I4I4I4I4I4I4"):unpack(key)}, KEYED_HASH)
+    return h:update(message):finalize():expand(len)
 end
 
 --- Makes a context-based key derivation function (KDF).
@@ -242,17 +315,15 @@ end
 --
 function mod.deriveKey(context)
     expect(1, context, "string")
-
-    local hash = blake3(IV, DERIVE_KEY_CONTEXT, context, 32)
-    local iv = {("<I4I4I4I4I4I4I4I4"):unpack(hash)}
+    local iv = new(IV, DERIVE_KEY_CONTEXT):update(context):finalize():expand(32)
 
     return function(material, len)
         expect(1, material, "string")
         expect(2, len, "number", "nil")
         len = len or 32
         assert(len % 1 == 0 and len >= 1, "length must be a positive integer")
-
-        return blake3(iv, DERIVE_KEY_MATERIAL, material, len)
+        local h = new({("<I4I4I4I4I4I4I4I4"):unpack(iv)}, DERIVE_KEY_MATERIAL)
+        return h:update(material):finalize():expand(len)
     end
 end
 

@@ -118,8 +118,8 @@ local function merge(cvl, cvr)
     return cvl
 end
 
-local function expand(out, len, offset)
-    expect(1, out, "table")
+local function expand(state, len, offset)
+    expect(1, state, "table")
     expect(1, len, "number")
     expect(2, offset, "nil", "number")
     offset = offset or 0
@@ -128,7 +128,7 @@ local function expand(out, len, offset)
     local out = {}
     for i = 0, len / 64 do
         local n = offset + i
-        local md = compress(out.cv, out.m, n, out.n, out.f, true)
+        local md = compress(state.cv, state.m, n, state.n, state.f, true)
         out[i + 1] = ("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):pack(unpack(md))
     end
 

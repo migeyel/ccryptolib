@@ -118,6 +118,23 @@ local function merge(cvl, cvr)
     return cvl
 end
 
+local function expand(out, len, offset)
+    expect(1, out, "table")
+    expect(1, len, "number")
+    expect(2, offset, "nil", "number")
+    offset = offset or 0
+
+    -- Expand output.
+    local out = {}
+    for i = 0, len / 64 do
+        local n = offset + i
+        local md = compress(out.cv, out.m, n, out.n, out.f, true)
+        out[i + 1] = ("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):pack(unpack(md))
+    end
+
+    return table.concat(out):sub(1, len)
+end
+
 local function update(state, message)
     expect(1, state, "table")
     expect(1, message, "string")
@@ -201,23 +218,6 @@ local function finalize(state)
             f = state.f + state.s + CHUNK_END + ROOT,
         }
     end
-end
-
-local function expand(out, len, offset)
-    expect(1, out, "table")
-    expect(1, len, "number")
-    expect(2, offset, "nil", "number")
-    offset = offset or 0
-
-    -- Expand output.
-    local out = {}
-    for i = 0, len / 64 do
-        local n = offset + i
-        local md = compress(out.cv, out.m, n, out.n, out.f, true)
-        out[i + 1] = ("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):pack(unpack(md))
-    end
-
-    return table.concat(out):sub(1, len)
 end
 
 local function copy(state)

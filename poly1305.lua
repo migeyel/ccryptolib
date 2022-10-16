@@ -3,8 +3,12 @@
 -- @module poly1305
 --
 
-local expect = require "cc.expect".expect
-local random = require "ccryptolib.random"
+local expect  = require "cc.expect".expect
+local random  = require "ccryptolib.random"
+local packing = require "ccryptolib.internal.packing"
+
+local u4x4, fmt4x4 = packing.compileUnpack("<I4I4I4I4")
+local p4x4 = packing.compilePack(fmt4x4)
 
 local mod = {}
 
@@ -27,7 +31,7 @@ function mod.mac(key, message)
     end
 
     -- Decode r.
-    local R0, R1, R2, R3 = ("<I4I4I4I4"):unpack(key)
+    local R0, R1, R2, R3 = u4x4(fmt4x4, key, 1)
 
     -- Clamp and shift.
     R0 = R0 % 2 ^ 28
@@ -55,7 +59,7 @@ function mod.mac(key, message)
 
     for i = 1, #message, 16 do
         -- Decode message block.
-        local m0, m1, m2, m3 = ("<I4I4I4I4"):unpack(message, i)
+        local m0, m1, m2, m3 = u4x4(fmt4x4, message, i)
 
         -- Shift message and add.
         local x0 = h0 + h1 + m0
@@ -119,7 +123,7 @@ function mod.mac(key, message)
     end
 
     -- Decode s.
-    local s0, s1, s2, s3 = ("<I4I4I4I4"):unpack(key, 17)
+    local s0, s1, s2, s3 = u4x4(fmt4x4, key, 17)
 
     -- Add.
     local t0 =           s0          + c0 + c1  local u0 = t0 % 2 ^ 32
@@ -128,7 +132,7 @@ function mod.mac(key, message)
     local t3 = t2 - u2 + s3 * 2 ^ 96 + c6 + c7  local u3 = t3 % 2 ^ 128
 
     -- Encode.
-    return ("<I4I4I4I4"):pack(u0, u1 / 2 ^ 32, u2 / 2 ^ 64, u3 / 2 ^ 96)
+    return p4x4(fmt4x4, u0, u1 / 2 ^ 32, u2 / 2 ^ 64, u3 / 2 ^ 96)
 end
 
 local mac = mod.mac

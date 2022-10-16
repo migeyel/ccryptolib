@@ -10,10 +10,15 @@
 -- @module[kind=internal] internal.fq
 --
 
-local mp   = require "ccryptolib.internal.mp"
-local util = require "ccryptolib.internal.util"
+local mp      = require "ccryptolib.internal.mp"
+local util    = require "ccryptolib.internal.util"
+local packing = require "ccryptolib.internal.packing"
 
 local unpack = unpack or table.unpack
+local pfq, fmtfq = packing.compilePack("<I3I3I3I3I3I3I3I3I3I3I2")
+local ufq = packing.compileUnpack(fmtfq)
+local ufql, fmtfql = packing.compileUnpack("<I3I3I3I3I3I3I3I3I3I3I3")
+local ufqh, fmtfqh = packing.compileUnpack("<I3I3I3I3I3I3I3I3I3I3I1")
 
 --- The scalar field's order, q.
 local Q = {
@@ -180,7 +185,7 @@ end
 -- @treturn string The 32-byte string encoding of a.
 --
 local function encode(a)
-    return ("<I3I3I3I3I3I3I3I3I3I3I2"):pack(unpack(demontgomery(a)))
+    return pfq(fmtfq, unpack(demontgomery(a)))
 end
 
 --- Decodes a scalar.
@@ -189,7 +194,7 @@ end
 -- @treturn {number...} 2²⁶⁴ × a mod q as 11 limbs in [0..2²⁴).
 --
 local function decode(str)
-    local dec = {("<I3I3I3I3I3I3I3I3I3I3I2"):unpack(str)} dec[12] = nil
+    local dec = {ufq(fmtfq, str, 1)} dec[12] = nil
     return montgomery(dec)
 end
 
@@ -199,8 +204,8 @@ end
 -- @treturn {number...} 2²⁶⁴ × a mod q as 11 limbs in [0..2²⁴).
 --
 local function decodeWide(str)
-    local low = {("<I3I3I3I3I3I3I3I3I3I3I3"):unpack(str)} low[12] = nil
-    local high = {("<I3I3I3I3I3I3I3I3I3I3I1"):unpack(str, 34)} high[12] = nil
+    local low = {ufql(fmtfql, str, 1)} low[12] = nil
+    local high = {ufqh(fmtfqh, str, 34)} high[12] = nil
     return add(montgomery(low), montgomery(montgomery(high)))
 end
 
@@ -211,7 +216,7 @@ end
 --
 local function decodeClamped(str)
     -- Decode.
-    local words = {("<I3I3I3I3I3I3I3I3I3I3I2"):unpack(str)} words[12] = nil
+    local words = {ufq(fmtfq, str, 1)} words[12] = nil
 
     -- Clamp.
     words[1] = bit32.band(words[1], 0xfffff8)
@@ -229,7 +234,7 @@ end
 --
 local function decodeClamped8(str)
     -- Decode.
-    local words = {("<I3I3I3I3I3I3I3I3I3I3I2"):unpack(str)} words[12] = nil
+    local words = {ufq(fmtfq, str, 1)} words[12] = nil
 
     -- Clamp.
     words[1] = bit32.band(words[1], 0xfffff8)

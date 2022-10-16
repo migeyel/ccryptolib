@@ -10,13 +10,17 @@
 -- @module[kind=internal] internal.sha512
 --
 
-local expect = require "cc.expect".expect
+local expect  = require "cc.expect".expect
+local packing = require "ccryptolib.internal.packing"
 
 local shl = bit32.lshift
 local shr = bit32.rshift
 local bxor = bit32.bxor
 local bnot = bit32.bnot
 local band = bit32.band
+local p1x16, fmt1x16 = packing.compilePack(">I16")
+local p16x4, fmt16x4 = packing.compilePack(">I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4")
+local u32x4, fmt32x4 = packing.compileUnpack(">I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4")
 
 local function carry64(a1, a0)
     local r0 = a0 % 2 ^ 32
@@ -65,9 +69,7 @@ local function digest(data)
     -- Pad input.
     local bitlen = #data * 8
     local padlen = -(#data + 17) % 128
-    data = data .. "\x80" .. ("\0"):rep(padlen) .. (">I16"):pack(bitlen)
-    local dataWords = {(">" .. ("I4"):rep(#data / 4)):unpack(data)}
-    dataWords[#dataWords] = nil
+    data = data .. "\x80" .. ("\0"):rep(padlen) .. p1x16(fmt1x16, bitlen)
 
     -- Initialize state.
     local h01, h00 = 0x6a09e667, 0xf3bcc908
@@ -80,12 +82,8 @@ local function digest(data)
     local h71, h70 = 0x5be0cd19, 0x137e2179
 
     -- Digest.
-    local w = {}
-    for i = 1, #dataWords, 32 do
-        local index = i - 1
-        for j = 1, 32 do
-            w[j] = dataWords[index + j]
-        end
+    for i = 1, #data, 128 do
+        local w = {u32x4(fmt32x4, data, i)}
 
         -- Message schedule.
         for j = 33, 160, 2 do
@@ -172,7 +170,7 @@ local function digest(data)
         h71, h70 = carry64(h71 + h1, h70 + h0)
     end
 
-    return (">I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):pack(
+    return p16x4(fmt16x4,
         h01, h00, h11, h10, h21, h20, h31, h30,
         h41, h40, h51, h50, h61, h60, h71, h70
     )

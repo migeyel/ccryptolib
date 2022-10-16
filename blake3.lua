@@ -3,11 +3,15 @@
 -- @module blake3
 --
 
-local expect = require "cc.expect".expect
+local expect  = require "cc.expect".expect
+local packing = require "ccryptolib.internal.packing"
 
 local unpack = unpack or table.unpack
 local bxor = bit32.bxor
 local rol = bit32.lrotate
+local p16x4, fmt16x4 = packing.compilePack("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4")
+local u16x4 = packing.compileUnpack(fmt16x4)
+local u8x4, fmt8x4 = packing.compileUnpack("<I4I4I4I4I4I4I4I4")
 
 local CHUNK_START         = 0x01
 local CHUNK_END           = 0x02
@@ -129,7 +133,7 @@ local function expand(state, len, offset)
     for i = 0, len / 64 do
         local n = offset + i
         local md = compress(state.cv, state.m, n, state.n, state.f, true)
-        out[i + 1] = ("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):pack(unpack(md))
+        out[i + 1] = p16x4(fmt16x4, unpack(md))
     end
 
     return table.concat(out):sub(1, len)
@@ -150,7 +154,7 @@ local function update(state, message)
     -- Digest complete blocks.
     for i = 1, #blocks, 64 do
         -- Compress the block.
-        local block = {("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):unpack(blocks, i)}
+        local block = {u16x4(fmt16x4, blocks, i)}
         local stateFlags = state.f + state.s + state.e
         state.cv = compress(state.cv, block, state.t, 64, stateFlags)
         state.s = 0
@@ -188,7 +192,7 @@ local function finalize(state)
     -- Pad the last message block.
     local lastLen = #state.m
     local padded = state.m .. ("\0"):rep(64)
-    local last = {("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):unpack(padded)}
+    local last = {u16x4(fmt16x4, padded, 1)}
 
     -- Prepare output expansion state.
     if state.t > 0 then
@@ -267,13 +271,13 @@ end
 function mod.newKeyed(key)
     expect(1, key, "string")
     assert(#key == 32, "key length must be 32")
-    return new({("<I4I4I4I4I4I4I4I4"):unpack(key)}, KEYED_HASH)
+    return new({u8x4(fmt8x4, key, 1)}, KEYED_HASH)
 end
 
 function mod.newDk(context)
     expect(1, context, "string")
     local iv = new(IV, DERIVE_KEY_CONTEXT):update(context):finalize():expand(32)
-    return new({("<I4I4I4I4I4I4I4I4"):unpack(iv)}, DERIVE_KEY_MATERIAL)
+    return new({u8x4(fmt8x4, iv, 1)}, DERIVE_KEY_MATERIAL)
 end
 
 --- Hashes data using BLAKE3.
@@ -304,7 +308,7 @@ function mod.digestKeyed(key, message, len)
     expect(3, len, "number", "nil")
     len = len or 32
     assert(len % 1 == 0 and len >= 1, "length must be a positive integer")
-    local h = new({("<I4I4I4I4I4I4I4I4"):unpack(key)}, KEYED_HASH)
+    local h = new({u8x4(fmt8x4, key, 1)}, KEYED_HASH)
     return h:update(message):finalize():expand(len)
 end
 
@@ -322,7 +326,7 @@ function mod.deriveKey(context)
         expect(2, len, "number", "nil")
         len = len or 32
         assert(len % 1 == 0 and len >= 1, "length must be a positive integer")
-        local h = new({("<I4I4I4I4I4I4I4I4"):unpack(iv)}, DERIVE_KEY_MATERIAL)
+        local h = new({u8x4(fmt8x4, iv, 1)}, DERIVE_KEY_MATERIAL)
         return h:update(material):finalize():expand(len)
     end
 end

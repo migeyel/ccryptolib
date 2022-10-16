@@ -3,10 +3,15 @@
 -- @module chacha20
 --
 
-local expect = require "cc.expect".expect
+local expect  = require "cc.expect".expect
+local packing = require "ccryptolib.internal.packing"
 
 local bxor = bit32.bxor
 local rol = bit32.lrotate
+local u8x4, fmt8x4 = packing.compileUnpack("<I4I4I4I4I4I4I4I4")
+local u3x4, fmt3x4 = packing.compileUnpack("<I4I4I4")
+local p16x4, fmt16x4 = packing.compilePack("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4")
+local u16x4 = packing.compileUnpack(fmt16x4)
 
 local mod = {}
 
@@ -36,8 +41,8 @@ function mod.crypt(key, nonce, message, rounds, offset)
 
     -- Build the state block.
     local i0, i1, i2, i3 = 0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
-    local k0, k1, k2, k3, k4, k5, k6, k7 = ("<I4I4I4I4I4I4I4I4"):unpack(key)
-    local cr, n0, n1, n2 = offset, ("<I4I4I4"):unpack(nonce)
+    local k0, k1, k2, k3, k4, k5, k6, k7 = u8x4(fmt8x4, key, 1)
+    local cr, n0, n1, n2 = offset, u3x4(fmt3x4, nonce, 1)
 
     -- Pad the message.
     local padded = message .. ("\0"):rep(-#message % 64)
@@ -101,10 +106,10 @@ function mod.crypt(key, nonce, message, rounds, offset)
 
         m00, m01, m02, m03, m04, m05, m06, m07,
         m08, m09, m10, m11, m12, m13, m14, m15, idx =
-            ("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):unpack(padded, idx)
+            u16x4(fmt16x4, padded, idx)
 
         -- Feed-forward and combine.
-        out[i] = ("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):pack(
+        out[i] = p16x4(fmt16x4,
             bxor(m00, s00 + i0), bxor(m01, s01 + i1),
             bxor(m02, s02 + i2), bxor(m03, s03 + i3),
             bxor(m04, s04 + k0), bxor(m05, s05 + k1),

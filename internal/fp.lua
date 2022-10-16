@@ -10,7 +10,10 @@
 -- @module[kind=internal] internal.fp
 --
 
+local packing = require "ccryptolib.inernal.packing"
+
 local unpack = unpack or table.unpack
+local ufp, fmtfp = packing.compileUnpack("<I3I3I2I3I3I2I3I3I2I3I3I2")
 
 --- The modular square root of -1.
 local I = {
@@ -751,7 +754,7 @@ end
 --
 local function decode(b)
     local w00, w01, w02, w03, w04, w05, w06, w07, w08, w09, w10, w11 =
-        ("<I3I3I2I3I3I2I3I3I2I3I3I2"):unpack(b)
+        ufp(fmtfp, b, 1)
 
     w11 = w11 % 2 ^ 15
 

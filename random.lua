@@ -1,5 +1,8 @@
 local blake3   = require "ccryptolib.blake3"
 local chacha20 = require "ccryptolib.chacha20"
+local packing  = require "ccryptolib.internal.packing"
+
+local u1x4, fmt1x4 = packing.compileUnpack("<I4")
 
 -- Initialize from local context.
 local ctx = {
@@ -55,7 +58,7 @@ end
 stir(512)
 
 -- Save.
-math.randomseed(("I4"):unpack(random(4)))
+math.randomseed(u1x4(fmt1x4, random(4), 1))
 save()
 
 return {

@@ -4,9 +4,12 @@
 --
 
 local expect   = require "cc.expect".expect
+local packing  = require "ccryptolib.internal.packing"
 local chacha20 = require "ccryptolib.chacha20"
 local poly1305 = require "ccryptolib.poly1305"
 
+local p8x1, fmt8x1 = packing.compilePack("<I8")
+local u4x4, fmt4x4 = packing.compileUnpack("<I4I4I4I4")
 local bxor = bit32.bxor
 local bor = bit32.bor
 
@@ -39,8 +42,8 @@ local function encrypt(key, nonce, message, aad, rounds)
     -- Authenticate.
     local pad1 = ("\0"):rep(-#aad % 16)
     local pad2 = ("\0"):rep(-#ciphertext % 16)
-    local aadLen = ("<I8"):pack(#aad)
-    local ctxLen = ("<I8"):pack(#ciphertext)
+    local aadLen = p8x1("<I8", #aad)
+    local ctxLen = p8x1("<I8", #ciphertext)
     local combined = aad .. pad1 .. ciphertext .. pad2 .. aadLen .. ctxLen
     local tag = poly1305.mac(authKey, combined)
 
@@ -77,11 +80,11 @@ local function decrypt(key, nonce, tag, ciphertext, aad, rounds)
     -- Check tag.
     local pad1 = ("\0"):rep(-#aad % 16)
     local pad2 = ("\0"):rep(-#ciphertext % 16)
-    local aadLen = ("<I8"):pack(#aad)
-    local ctxLen = ("<I8"):pack(#ciphertext)
+    local aadLen = p8x1(fmt8x1, #aad)
+    local ctxLen = p8x1(fmt8x1, #ciphertext)
     local combined = aad .. pad1 .. ciphertext .. pad2 .. aadLen .. ctxLen
-    local t1, t2, t3, t4 = ("<I4I4I4I4"):unpack(tag)
-    local u1, u2, u3, u4 = ("<I4I4I4I4"):unpack(poly1305.mac(authKey, combined))
+    local t1, t2, t3, t4 = u4x4(fmt4x4, tag, 1)
+    local u1, u2, u3, u4 = u4x4(fmt4x4, poly1305.mac(authKey, combined), 1)
     local eq = bor(bxor(t1, u1), bxor(t2, u2), bxor(t3, u3), bxor(t4, u4))
     if eq == 0 then return message end
 end

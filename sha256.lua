@@ -3,7 +3,8 @@
 -- @module sha256
 --
 
-local expect = require "cc.expect".expect
+local expect  = require "cc.expect".expect
+local packing = require "ccryptolib.internal.packing"
 
 local rol = bit32.lrotate
 local shr = bit32.rshift
@@ -11,6 +12,11 @@ local bxor = bit32.bxor
 local bnot = bit32.bnot
 local band = bit32.band
 local unpack = unpack or table.unpack
+local p1x8, fmt1x8 = packing.compilePack(">I8")
+local p16x4, fmt16x4 = packing.compilePack(">I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4")
+local u16x4 = packing.compileUnpack(fmt16x4)
+local p8x4, fmt8x4 = packing.compilePack(">I4I4I4I4I4I4I4I4")
+local u8x4 = packing.compileUnpack(fmt8x4)
 
 local function primes(n, exp)
     local out = {}
@@ -82,15 +88,15 @@ local function digest(data)
     -- Pad input.
     local bitlen = #data * 8
     local padlen = -(#data + 9) % 64
-    data = data .. "\x80" .. ("\0"):rep(padlen) .. (">I8"):pack(bitlen)
+    data = data .. "\x80" .. ("\0"):rep(padlen) .. p1x8(fmt1x8, bitlen)
 
     -- Digest.
     local h = h0
     for i = 1, #data, 64 do
-        h = compress(h, {(">I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):unpack(data, i)})
+        h = compress(h, {u16x4(fmt16x4, data, i)})
     end
 
-    return (">I4I4I4I4I4I4I4I4"):pack(unpack(h))
+    return p8x4(fmt8x4, unpack(h))
 end
 
 --- Hashes a password using PBKDF2-HMAC-SHA256.
@@ -110,7 +116,7 @@ local function pbkdf2(password, salt, iter)
     -- Pad password.
     if #password > 64 then password = digest(password) end
     password = password .. ("\0"):rep(-#password % 64)
-    password = {(">I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):unpack(password)}
+    password = {u16x4(fmt16x4, password, 1)}
 
     -- Compute password blocks.
     local ikp = {}
@@ -127,8 +133,8 @@ local function pbkdf2(password, salt, iter)
     local pad96 = {2 ^ 31, 0, 0, 0, 0, 0, 0, 0x300}
 
     -- First iteration.
-    local pre = (">I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4"):pack(unpack(ikp))
-    local hs = {(">I4I4I4I4I4I4I4I4"):unpack(digest(pre .. salt .. "\0\0\0\1"))}
+    local pre = p16x4(fmt16x4, unpack(ikp))
+    local hs = {u8x4(fmt8x4, digest(pre .. salt .. "\0\0\0\1"), 1)}
     for i = 1, 8 do hs[i + 8] = pad96[i] end
     hs = compress(hokp, hs)
 
@@ -142,7 +148,7 @@ local function pbkdf2(password, salt, iter)
         for i = 1, 8 do out[i] = bxor(out[i], hs[i]) end
     end
 
-    return (">I4I4I4I4I4I4I4I4"):pack(unpack(out))
+    return p8x4(fmt8x4, unpack(out))
 end
 
 return {

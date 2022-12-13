@@ -1,3 +1,4 @@
+local expect   = require "cc.expect".expect
 local blake3   = require "ccryptolib.blake3"
 local chacha20 = require "ccryptolib.chacha20"
 local packing  = require "ccryptolib.internal.packing"
@@ -6,6 +7,7 @@ local u1x4, fmt1x4 = packing.compileUnpack("<I4")
 
 -- Initialize from local context.
 local ctx = {
+    "ccryptolib 2022-03-05T08:50:36Z random.lua initialization context",
     os.epoch("utc"),
     math.random(0, 2 ^ 24 - 1),
     math.random(0, 2 ^ 24 - 1),
@@ -13,28 +15,73 @@ local ctx = {
     tostring({}),
 }
 
-local state = blake3.digest(table.concat(ctx, "|"), 32)
+local state = blake3.digest(table.concat(ctx, "|"))
+local accumulator = {}
+local accumulatorLen = 0
 
-local function seed(data)
-    state = blake3.digestKeyed(state, data, 32)
-end
+--- Adds data to the accumulator without context.
+--
+-- @tparam string data The input bytes.
+--
+local function reseed(data)
+    local acc = accumulator
+    local len = accumulatorLen
 
-local function stir(n)
-    -- Collect samples from jitter.
-    local epoch = os.epoch
-    local acc = {}
-    local byte = 0
-    for i = 1, n do
-        local t0 = epoch("utc")
-        repeat byte = byte + 1 until epoch("utc") ~= t0
-        acc[i] = byte % 256
+    -- Append to the accumulator.
+    acc[#acc + 1] = data
+    len = len + #data
+
+    if len < 64 then
+        accumulatorLen = len
+        return
     end
 
-    -- Extract into the new state.
-    seed(string.char(table.unpack(acc)))
+    -- Concatenate.
+    local cat = table.concat(acc)
+
+    -- Align by 64-byte block.
+    local rlen = len % 64
+    local blen = len - rlen
+
+    -- Digest.
+    state = blake3.digestKeyed(state, cat:sub(1, blen))
+    accumulator = {cat:sub(blen + 1)}
+    accumulatorLen = rlen
 end
 
-local function random(len)
+do -- Load entropy from disk.
+    local file = fs.open("/.random", "rb")
+    if file then
+        reseed(file.read(32) or "")
+        file.close()
+    end
+end
+
+local mod = {}
+
+--- Adds entropy into the generator state.
+--
+-- @tparam string data The entropy data.
+--
+function mod.reseed(data)
+    expect(1, data, "string")
+    reseed(data)
+end
+
+--- Adds entropy from sampling system noise.
+--
+-- @tparam number n The number of iterations to spend extracting entropy.
+--
+function mod.stir(n)
+    expect(1, n, "number")
+    error("TODO") -- TODO
+end
+
+--- Generates random bytes.
+--
+-- @tparam number len The desired output length.
+--
+function mod.random(len)
     local msg = ("\0"):rep(len + 32)
     local nonce = ("\0"):rep(12)
     local out = chacha20.crypt(state, nonce, msg, 8, 0)
@@ -42,28 +89,26 @@ local function random(len)
     return out:sub(33)
 end
 
-local function save()
+local random = mod.random
+
+--- Saves the state to the filesystem.
+--
+-- This potentially adds security when starting the generator from boot. The
+-- saved path is fixed and located at `/.random`.
+--
+function mod.save()
     local file = fs.open("/.random", "wb")
     file.write(random(32))
     file.close()
 end
 
--- Load.
-if fs.exists("/.random") then
-    local file = fs.open("/.random", "rb")
-    seed(file.read(32) or "")
-end
-
 -- Add extra entropy.
-stir(512)
+mod.stir(error("TODO")) -- TODO
 
 -- Save.
-math.randomseed(u1x4(fmt1x4, random(4), 1))
-save()
+mod.save()
 
-return {
-    seed = seed,
-    stir = stir,
-    random = random,
-    save = save,
-}
+-- Regenerate the math.random seed.
+math.randomseed(u1x4(fmt1x4, random(4), 1))
+
+return mod

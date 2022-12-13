@@ -10,7 +10,7 @@
 -- @module[kind=internal] internal.fp
 --
 
-local packing = require "ccryptolib.inernal.packing"
+local packing = require "ccryptolib.internal.packing"
 
 local unpack = unpack or table.unpack
 local ufp, fmtfp = packing.compileUnpack("<I3I3I2I3I3I2I3I3I2I3I3I2")

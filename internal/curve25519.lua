@@ -257,10 +257,6 @@ local function prac(P, ruleset)
     return A, B, C
 end
 
-local function fieldMul(P, m)
-    return {fp.mul(P[1], fp.decode(m)), P[2]}
-end
-
 return {
     G = {fp.num(9), fp.num(1)},
     dadd = dadd,
@@ -270,5 +266,4 @@ return {
     ladder8 = ladder8,
     mulG = mulG,
     prac = prac,
-    fieldMul = fieldMul,
 }

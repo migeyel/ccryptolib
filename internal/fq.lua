@@ -255,8 +255,12 @@ end
 
 --- Makes a PRAC ruleset from a pair of scalars.
 --
--- @tparam {number...} a A scalar a < q as 11 limbs in [0..2²⁴).
--- @tparam {number...} b A scalar b < q as 11 limbs in [0..2²⁴).
+-- For more information see section 3.3 of Speeding up subgroup cryptosystems:
+-- Martijn Stam. Speeding up subgroup cryptosystems. PhD thesis, Technische
+-- Universiteit Eindhoven, 2003. https://dx.doi.org/10.6100/IR564670.
+--
+-- @tparam {number...} a A scalar 2²⁶⁴ × a mod q as 11 limbs in [0..2²⁴).
+-- @tparam {number...} b A scalar 2²⁶⁴ × b mod q as 11 limbs in [0..2²⁴).
 -- @treturn {{number...}, {number...}} The generated ruleset.
 --
 local function makeRuleset(a, b)
@@ -283,7 +287,7 @@ local function makeRuleset(a, b)
     local rules = {}
     while ff ~= 0 do
         if ff < 0 then
-            -- M0.
+            -- M0. d < e
             rules[#rules + 1] = 0
             -- (d, e) ← (e, d)
             dt, et = et, dt
@@ -293,7 +297,7 @@ local function makeRuleset(a, b)
             ft = mp.sub(dt, et)
             ff = -ff
         elseif 4 * ff < ef and d3 == lut3[e3] then
-            -- M1.
+            -- M1. e < d ≤ 5/4 e, d ≡ -e (mod 3)
             rules[#rules + 1] = 1
             -- (d, e) ← ((2d - e)/3, (2e - d)/3)
             dt, et = mp.third(mp.add(dt, ft)), mp.third(mp.sub(et, ft))
@@ -301,7 +305,7 @@ local function makeRuleset(a, b)
             d3, e3 = mp.mod3(dt), mp.mod3(et)
             ef = mp.approx(et)
         elseif 4 * ff < ef and d2 == e2 and d3 == e3 then
-            -- M2.
+            -- M2. e < d ≤ 5/4 e, d ≡ e (mod 6)
             rules[#rules + 1] = 2
             -- (d, e) ← ((d - e)/2, e)
             dt = mp.half(ft)
@@ -310,7 +314,7 @@ local function makeRuleset(a, b)
             ft = mp.sub(dt, et)
             ff = mp.approx(ft)
         elseif ff < 3 * ef then
-            -- M3.
+            -- M3. d ≤ 4e
             rules[#rules + 1] = 3
             -- (d, e) ← (d - e, e)
             dt = mp.carryWeak(ft)
@@ -319,7 +323,7 @@ local function makeRuleset(a, b)
             ft = mp.sub(dt, et)
             ff = mp.approx(ft)
         elseif d2 == e2 then
-            -- M4 (same as M2).
+            -- M4. d ≡ e (mod 2)
             rules[#rules + 1] = 2
             -- (d, e) ← ((d - e)/2, e)
             dt = mp.half(ft)
@@ -328,7 +332,7 @@ local function makeRuleset(a, b)
             ft = mp.sub(dt, et)
             ff = mp.approx(ft)
         elseif d2 == 0 then
-            -- M5.
+            -- M5. d ≡ 0 (mod 2)
             rules[#rules + 1] = 5
             -- (d, e) ← (d/2, e)
             dt = mp.half(dt)
@@ -337,7 +341,7 @@ local function makeRuleset(a, b)
             ft = mp.sub(dt, et)
             ff = mp.approx(ft)
         elseif d3 == 0 then
-            -- M6.
+            -- M6. d ≡ 0 (mod 3)
             rules[#rules + 1] = 6
             -- (d, e) ← (d/3 - e, e)
             dt = mp.carryWeak(mp.sub(mp.third(dt), et))
@@ -346,7 +350,7 @@ local function makeRuleset(a, b)
             ft = mp.sub(dt, et)
             ff = mp.approx(ft)
         elseif d3 == lut3[e3] then
-            -- M7.
+            -- M7. d ≡ -e (mod 3)
             rules[#rules + 1] = 7
             -- (d, e) ← ((d - 2e)/3, e)
             dt = mp.third(mp.sub(ft, et))
@@ -354,7 +358,7 @@ local function makeRuleset(a, b)
             ft = mp.sub(dt, et)
             ff = mp.approx(ft)
         elseif d3 == e3 then
-            -- M8.
+            -- M8. d ≡ e (mod 3)
             rules[#rules + 1] = 8
             -- (d, e) ← ((d - e)/3, e)
             dt = mp.third(ft)
@@ -363,7 +367,7 @@ local function makeRuleset(a, b)
             ft = mp.sub(dt, et)
             ff = mp.approx(ft)
         else
-            -- M9.
+            -- M9. e ≡ 0 (mod 2)
             rules[#rules + 1] = 9
             -- (d, e) ← (d, e/2)
             et = mp.half(et)

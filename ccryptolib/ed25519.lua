@@ -54,7 +54,7 @@ function mod.sign(sk, pk, msg)
 
     -- Response.
     local m = fq.decodeWide(random.random(64))
-    local s = fq.add(fq.add(k, fq.neg(fq.mul(fq.add(x, m), e))), fq.mul(m, e))
+    local s = fq.add(fq.add(k, fq.mul(fq.add(x, m), e)), fq.mul(m, e))
     local sStr = fq.encode(s)
 
     return rStr .. sStr
@@ -84,7 +84,7 @@ function mod.verify(pk, msg, sig)
 
     local gs = ed.mulG(fq.bits(fq.decode(sStr)))
     local ye = ed.mul(y, fq.bits(e))
-    local rv = ed.add(gs, ed.niels(ye))
+    local rv = ed.sub(gs, ed.niels(ye))
 
     return ed.encode(rv) == rStr
 end

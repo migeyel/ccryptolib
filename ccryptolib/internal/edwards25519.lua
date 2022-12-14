@@ -274,6 +274,7 @@ end
 return {
     double = double,
     add = add,
+    sub = sub,
     niels = niels,
     encode = encode,
     decode = decode,

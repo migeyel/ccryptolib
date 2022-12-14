@@ -103,7 +103,7 @@ function mod.save()
 end
 
 -- Add extra entropy.
-mod.stir(error("TODO")) -- TODO
+-- mod.stir(error("TODO")) -- TODO
 
 -- Save.
 mod.save()

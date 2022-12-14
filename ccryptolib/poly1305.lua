@@ -20,7 +20,7 @@ local mod = {}
 --
 function mod.mac(key, message)
     expect(1, key, "string")
-    assert(#key == 32, "key length must be 32")
+    if #key ~= 32 then error("key length must be 32", 2) end
     expect(2, message, "string")
 
     -- Pad message.

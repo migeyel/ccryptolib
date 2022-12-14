@@ -125,8 +125,12 @@ end
 local function expand(state, len, offset)
     expect(1, state, "table")
     expect(1, len, "number")
-    expect(2, offset, "nil", "number")
-    offset = offset or 0
+    if len % 1 ~= 0 then error("length must be an integer", 2) end
+    if len < 1 then error("length must be positive", 2) end
+    offset = expect(2, offset, "nil", "number") or 0
+    if offset % 1 ~= 0 then error("offset must be an integer", 2) end
+    if offset < 0 then error("offset must be nonnegative", 2) end
+    if offset + len > 2 ^ 32 then error("offset is too large", 2) end
 
     -- Expand output.
     local out = {}
@@ -189,6 +193,8 @@ local function update(state, message)
 end
 
 local function finalize(state)
+    expect(1, state, "table")
+
     -- Pad the last message block.
     local lastLen = #state.m
     local padded = state.m .. ("\0"):rep(64)
@@ -270,7 +276,7 @@ end
 
 function mod.newKeyed(key)
     expect(1, key, "string")
-    assert(#key == 32, "key length must be 32")
+    if #key ~= 32 then error("key length must be 32", 2) end
     return new({u8x4(fmt8x4, key, 1)}, KEYED_HASH)
 end
 
@@ -288,9 +294,9 @@ end
 --
 function mod.digest(message, len)
     expect(1, message, "string")
-    expect(2, len, "number", "nil")
-    len = len or 32
-    assert(len % 1 == 0 and len >= 1, "length must be a positive integer")
+    len = expect(2, len, "number", "nil") or 32
+    if len % 1 ~= 0 then error("length must be an integer", 2) end
+    if len < 1 then error("length must be positive", 2) end
     return new(IV, 0):update(message):finalize():expand(len)
 end
 
@@ -303,11 +309,11 @@ end
 --
 function mod.digestKeyed(key, message, len)
     expect(1, key, "string")
-    assert(#key == 32, "key length must be 32")
+    if #key ~= 32 then error("key length must be 32", 2) end
     expect(2, message, "string")
-    expect(3, len, "number", "nil")
-    len = len or 32
-    assert(len % 1 == 0 and len >= 1, "length must be a positive integer")
+    len = expect(3, len, "number", "nil") or 32
+    if len % 1 ~= 0 then error("length must be an integer", 2) end
+    if len < 1 then error("length must be positive", 2) end
     local h = new({u8x4(fmt8x4, key, 1)}, KEYED_HASH)
     return h:update(message):finalize():expand(len)
 end
@@ -323,9 +329,9 @@ function mod.deriveKey(context)
 
     return function(material, len)
         expect(1, material, "string")
-        expect(2, len, "number", "nil")
-        len = len or 32
-        assert(len % 1 == 0 and len >= 1, "length must be a positive integer")
+        len = expect(2, len, "number", "nil") or 32
+        if len % 1 ~= 0 then error("length must be an integer", 2) end
+        if len < 1 then error("length must be positive", 2) end
         local h = new({u8x4(fmt8x4, iv, 1)}, DERIVE_KEY_MATERIAL)
         return h:update(material):finalize():expand(len)
     end

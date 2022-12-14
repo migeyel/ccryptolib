@@ -25,13 +25,15 @@ local bor = bit32.bor
 --
 local function encrypt(key, nonce, message, aad, rounds)
     expect(1, key, "string")
-    assert(#key == 32, "key length must be 32")
+    if #key ~= 32 then error("key length must be 32", 2) end
     expect(2, nonce, "string")
-    assert(#nonce == 12, "nonce length must be 12")
+    if #nonce ~= 12 then error("nonce length must be 12", 2) end
     expect(3, message, "string")
     expect(4, aad, "string")
-    expect(5, rounds, "number", "nil")
-    rounds = rounds or 20
+    rounds = expect(5, rounds, "number", "nil") or 20
+    if rounds % 2 ~= 0 then error("round number must be even", 2) end
+    if rounds < 8 then error("round number must be no smaller than 8", 2) end
+    if rounds > 20 then error("round number must be no larger than 20", 2) end
 
     -- Generate auth key and encrypt.
     local msgLong = ("\0"):rep(64) .. message
@@ -63,13 +65,17 @@ end
 --
 local function decrypt(key, nonce, tag, ciphertext, aad, rounds)
     expect(1, key, "string")
-    assert(#key == 32, "key length must be 32")
+    if #key ~= 32 then error("key length must be 32", 2) end
     expect(2, nonce, "string")
-    assert(#nonce == 12, "nonce length must be 12")
-    expect(3, ciphertext, "string")
-    expect(4, aad, "string")
-    expect(5, rounds, "number", "nil")
-    rounds = rounds or 20
+    if #nonce ~= 12 then error("nonce length must be 12", 2) end
+    expect(3, tag, "string")
+    if #tag ~= 16 then error("tag length must be 16", 2) end
+    expect(4, ciphertext, "string")
+    expect(5, aad, "string")
+    rounds = expect(6, rounds, "number", "nil") or 20
+    if rounds % 2 ~= 0 then error("round number must be even", 2) end
+    if rounds < 8 then error("round number must be no smaller than 8", 2) end
+    if rounds > 20 then error("round number must be no larger than 20", 2) end
 
     -- Generate auth key and decrypt.
     local ctxLong = ("\0"):rep(64) .. ciphertext

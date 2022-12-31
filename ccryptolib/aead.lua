@@ -77,11 +77,8 @@ local function decrypt(key, nonce, tag, ciphertext, aad, rounds)
     if rounds < 8 then error("round number must be no smaller than 8", 2) end
     if rounds > 20 then error("round number must be no larger than 20", 2) end
 
-    -- Generate auth key and decrypt.
-    local ctxLong = ("\0"):rep(64) .. ciphertext
-    local msgLong = chacha20.crypt(key, nonce, ctxLong, rounds, 0)
-    local authKey = msgLong:sub(1, 32)
-    local message = msgLong:sub(65)
+    -- Generate auth key.
+    local authKey = chacha20.crypt(key, nonce, ("\0"):rep(32), rounds, 0)
 
     -- Check tag.
     local pad1 = ("\0"):rep(-#aad % 16)
@@ -91,8 +88,11 @@ local function decrypt(key, nonce, tag, ciphertext, aad, rounds)
     local combined = aad .. pad1 .. ciphertext .. pad2 .. aadLen .. ctxLen
     local t1, t2, t3, t4 = u4x4(fmt4x4, tag, 1)
     local u1, u2, u3, u4 = u4x4(fmt4x4, poly1305.mac(authKey, combined), 1)
-    local eq = bor(bxor(t1, u1), bxor(t2, u2), bxor(t3, u3), bxor(t4, u4))
-    if eq == 0 then return message end
+    local eq = bxor(t1, u1) + bxor(t2, u2) + bxor(t3, u3) + bxor(t4, u4)
+    if eq ~= 0 then return nil end
+
+    -- Decrypt
+    return chacha20.crypt(key, nonce, ciphertext, rounds)
 end
 
 return {

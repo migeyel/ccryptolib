@@ -62,37 +62,43 @@ local function exchangeOnPoint(sk, P)
     local xP = c25.dadd(dP, rP, xrP)
 
     -- Extract coordinates for scaling.
+    local Px, Pz = P[1], P[2]
     local xPx, xPz = xP[1], xP[2]
     local rPx, rPz = rP[1], rP[2]
+
+    -- Ensure all Z coordinates are squares.
+    Px, Pz = fp.mul(Px, Pz), fp.square(Pz)
+    xPx, xPz = fp.mul(xPx, xPz), fp.square(xPz)
+    rPx, rPz = fp.mul(rPx, rPz), fp.square(rPz)
 
     -- We're splitting the secret x into (x - r (mod q), r). The multiplication
     -- adds them back together, but this only works if P's order is q, which is
     -- not the case on the twist.
     -- As a result, we need to check if P is on the twist and return 0 so as to
     -- not leak part of x. We do this by checking the curve equation against P.
-    -- The equation for Curve25519 is y² = x³ + 486662x² + x. Checking it
-    -- amounts to verifying that x³ + 486662x² + x is a quadratic residue.
-    local Px = P[1]
+    -- The projective equation for curve25519 is Y²Z = X(X² + AXZ + Z²). Since Z
+    -- is a square, checking validity means checking the right-hand side to be a
+    -- square.
     local Px2 = fp.square(Px)
-    local Px3 = fp.mul(Px2, Px)
-    local APx2 = fp.kmul(Px2, 486662)
-    local Py2 = fp.carry(fp.add(fp.carry(fp.add(Px3, APx2)), Px))
+    local Pz2 = fp.square(Pz)
+    local Pxz = fp.mul(Px, Pz)
+    local APxz = fp.kmul(Pxz, 486662)
+    local rhs = fp.mul(Px, fp.add(Px2, fp.carry(fp.add(APxz, Pz2))))
 
-    -- Square the Z coordinate on both products.
-    xPx, xPz = fp.mul(xPx, xPz), fp.square(xPz)
-    rPx, rPz = fp.mul(rPx, rPz), fp.square(rPz)
-
-    -- Find the square root of 1 / (Py2 * xPz * rPz).
-    -- Neither rPz, xPz, nor Py2 are 0:
-    -- - If Py2 was 0, then P would be low order, which would return at (1).
+    -- Find the square root of 1 / (rhs * xPz * rPz).
+    -- Neither rPz, xPz, nor rhs are 0:
+    -- - If rhs was 0, then P would be low order, which would return at (1).
     -- - Since P isn't low order, clamping prevents the ladder from returning O.
-    -- Since we've just squared both xPz and rPz, the root will exist iff Py2 is
-    -- a quadratic residue. This checks the curve equation, so we're done.
-    local root = fp.sqrtDiv(fp.num(1), fp.mul(fp.mul(xPz, rPz), Py2))
-    if not root then return fp.encode(fp.num(0)) end
+    -- Since we've just squared both xPz and rPz, the root will exist iff rhs is
+    -- a square. This checks the curve equation, so we're done.
+    local root = fp.sqrtDiv(fp.num(1), fp.mul(fp.mul(xPz, rPz), rhs))
+    if not root then
+        local out = fp.encode(fp.num(0))
+        return out, out
+    end
 
     -- Get the inverses of both Z values.
-    local xPzrPzInv = fp.mul(fp.square(root), Py2)
+    local xPzrPzInv = fp.mul(fp.square(root), rhs)
     local xPzInv = fp.mul(xPzrPzInv, rPz)
     local rPzInv = fp.mul(xPzrPzInv, xPz)
 

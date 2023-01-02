@@ -52,7 +52,6 @@ local function bits(str)
     out[255] = 1
     out[256] = 0
 
-    -- We remove the 3 lowest bits since the ladder already multiplies by 8.
     return out
 end
 

@@ -247,10 +247,12 @@ end
 --- Returns a scalar in binary.
 --
 -- @tparam {number...} a A number a < q as 11 limbs in [0..2²⁴).
--- @treturn {number...} 2⁻²⁶⁴ × a mod q as 265 bits.
+-- @treturn {number...} 2⁻²⁶⁴ × a mod q as 253 bits.
 --
 local function bits(a)
-    return util.rebaseLE(demontgomery(a), 2 ^ 24, 2)
+    local out = util.rebaseLE(demontgomery(a), 2 ^ 24, 2)
+    for i = 254, 289 do out[i] = nil end
+    return out
 end
 
 --- Makes a PRAC ruleset from a pair of scalars.

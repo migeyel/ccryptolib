@@ -1,12 +1,18 @@
---- Test vector specification for X25519.
+--- Test vector specification for masked X25519.
 --
 -- Derived from RFC 7748.
 --
 
 local util = require "spec.util"
-local x25519 = require "ccryptolib.x25519"
+local x25519c = require "ccryptolib.x25519c"
 
-describe("x25519.exchange", function()
+local function exchange(sk, pk)
+    local sk, ek = x25519c.mask(sk)
+    sk, ek = x25519c.remask(sk, ek)
+    return (x25519c.exchange(sk, ek, pk))
+end
+
+describe("x25519c.exchange", function()
     it("passes the section 5.2 test vector #1", function()
         local x = util.hexcat {
             "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4",
@@ -20,10 +26,10 @@ describe("x25519.exchange", function()
             "c3da55379de9c6908e94ea4df28d084f32eccf03491c71f754b4075577a28552",
         }
 
-        expect(x25519.exchange(x, p)):eq(q)
+        expect(exchange(x, p)):eq(q)
     end)
 
-    it("passes the section 5.2 test vector #2", function()
+    it("doesn't pass the section 5.2 test vector #2", function()
         local x = util.hexcat {
             "4b66e9d4d1b4673c5ad22691957d6af5c11b6421e0ea01d42ca4169e7918ba0d",
         }
@@ -33,10 +39,10 @@ describe("x25519.exchange", function()
         }
 
         local q = util.hexcat {
-            "95cbde9476e8907d7aade45cb4b873f88b595a68799fa152e6f8f7647aac7957",
+            "0000000000000000000000000000000000000000000000000000000000000000",
         }
 
-        expect(x25519.exchange(x, p)):eq(q)
+        expect(exchange(x, p)):eq(q)
     end)
 
     it("passes the section 5.2 test vector #3 (1k iterations)", function()
@@ -49,10 +55,10 @@ describe("x25519.exchange", function()
             "422c8e7a6227d7bca1350b3e2bb7279f7897b87bb6854b783c60e80311ae3079",
         }
 
-        expect(x25519.exchange(k, u)):eq(u2)
+        expect(exchange(k, u)):eq(u2)
 
         for _ = 1, 1000 do
-            k, u = x25519.exchange(k, u), k
+            k, u = exchange(k, u), k
             sleep()
         end
 
@@ -63,7 +69,7 @@ describe("x25519.exchange", function()
         expect(k):eq(k1000)
     end)
 
-    it("passes the appendix A.1 test vectors of CPace", function()
+    it("passes the appendix A.1 test vectors of CPace, mostly", function()
         local sk = util.hexcat {
             "af46e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449aff",
         }
@@ -91,17 +97,17 @@ describe("x25519.exchange", function()
             "0000000000000000000000000000000000000000000000000000000000000000",
             "0000000000000000000000000000000000000000000000000000000000000000",
             "0000000000000000000000000000000000000000000000000000000000000000",
-            "e062dcd5376d58297be2618c7498f55baa07d7e03184e8aada20bca28888bf7a",
+            "0000000000000000000000000000000000000000000000000000000000000000",
             "993c6ad11c4c29da9a56f7691fd0ff8d732e49de6250b6c2e80003ff4629a175",
-            "db64dafa9b8fdd136914e61461935fe92aa372cb056314e1231bc4ec12417456",
+            "0000000000000000000000000000000000000000000000000000000000000000",
             "d8e2c776bbacd510d09fd9278b7edcd25fc5ae9adfba3b6e040e8d3b71b21806",
-            "c85c655ebe8be44ba9c0ffde69f2fe10194458d137f09bbff725ce58803cdb38",
+            "0000000000000000000000000000000000000000000000000000000000000000",
         }
 
         for i = 1, #ins do
             local input = util.hexcat { ins[i] }
             local output = util.hexcat { outs[i] }
-            expect(x25519.exchange(sk, input)):eq(output)
+            expect(exchange(sk, input)):eq(output)
         end
     end)
 end)

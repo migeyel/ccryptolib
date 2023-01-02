@@ -121,6 +121,25 @@ local function decode(str)
     return {fp.decode(str), fp.num(1)}
 end
 
+--- Decodes an Edwards25519 encoded point into Curve25519, ignoring the sign.
+--
+-- There is a single exception: The identity point (0, 1), which gets mapped
+-- into the 2-torsion point (0, 0), which isn't the identity of Curve25519.
+--
+-- @tparam string str A 32-byte encoded Edwards25519 point.
+-- @treturn point The decoded point, mapped into Curve25519.
+--
+local function decodeEd(str)
+    local y = fp.decode(str)
+    local n = fp.carry(fp.add(fp.num(1), y))
+    local d = fp.carry(fp.sub(fp.num(1), y))
+    if fp.eqz(d) then
+        return {fp.num(0), fp.num(1)}
+    else
+        return {n, d}
+    end
+end
+
 --- Performs a scalar multiplication by the base point G.
 --
 -- @tparam {number...} bits The scalar multiplier, in little-endian bits.
@@ -269,6 +288,7 @@ return {
     scale = scale,
     encode = encode,
     decode = decode,
+    decodeEd = decodeEd,
     ladder8 = ladder8,
     mulG = mulG,
     prac = prac,

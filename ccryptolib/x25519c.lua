@@ -27,23 +27,7 @@ local function remask(msk, oldMask)
     return fq.encode(xs), newMask
 end
 
---- Treats both shares as X25519 keys and performs a double key exchange.
---
--- Returns 0 if the input public key has small order or if it isn't in the base
--- curve. This is different from standard X25519, which performs the exchange
--- even on the twist.
---
--- May incorrectly return 0 with negligible chance if the mask happens to match
--- the masked key. I haven't checked if clamping prevents that from happening.
---
-local function exchange(msk, mask, pk)
-    expect(1, msk, "string")
-    assert(#msk == 32, "masked secret key length must be 32")
-    expect(2, mask, "string")
-    assert(#mask == 32, "mask length must be 32")
-    expect(3, pk, "string")
-    assert(#pk == 32, "public key length must be 32")
-    local P = c25.decode(pk)
+local function exchangeOnPoint(msk, mask, P)
     local xr = fq.decode(msk)
     local r = fq.decodeClamped8(mask)
     local rP, xrP, dP = c25.prac(P, fq.makeRuleset(r, xr))
@@ -95,8 +79,39 @@ local function exchange(msk, mask, pk)
     return fp.encode(fp.mul(xPx, xPzInv)), fp.encode(fp.mul(rPx, rPzInv))
 end
 
+--- Treats both shares as X25519 keys and performs a double key exchange.
+--
+-- Returns 0 if the input public key has small order or if it isn't in the base
+-- curve. This is different from standard X25519, which performs the exchange
+-- even on the twist.
+--
+-- May incorrectly return 0 with negligible chance if the mask happens to match
+-- the masked key. I haven't checked if clamping prevents that from happening.
+--
+local function exchange(msk, mask, pk)
+    expect(1, msk, "string")
+    assert(#msk == 32, "masked secret key length must be 32")
+    expect(2, mask, "string")
+    assert(#mask == 32, "mask length must be 32")
+    expect(3, pk, "string")
+    assert(#pk == 32, "public key length must be 32")
+    return exchangeOnPoint(msk, mask, c25.decode(pk))
+end
+
+--- Same as @{exchange}, but decodes the public key as an Edwards25519 point.
+local function exchangeEd(msk, mask, pk)
+    expect(1, msk, "string")
+    assert(#msk == 32, "masked secret key length must be 32")
+    expect(2, mask, "string")
+    assert(#mask == 32, "mask length must be 32")
+    expect(3, pk, "string")
+    assert(#pk == 32, "public key length must be 32")
+    return exchangeOnPoint(msk, mask, c25.decodeEd(pk))
+end
+
 return {
     mask = mask,
     remask = remask,
     exchange = exchange,
+    exchangeEd = exchangeEd,
 }

@@ -34,4 +34,13 @@ function mod.exchange(sk, pk)
     return c25.encode(c25.scale(c25.ladder8(c25.decode(pk), util.bits8(sk))))
 end
 
+--- Same as @{exchange}, but decodes the public key as an Edwards25519 point.
+function mod.exchangeEd(sk, pk)
+    expect(1, sk, "string")
+    assert(#sk == 32, "secret key length must be 32")
+    expect(2, pk, "string")
+    assert(#pk == 32, "public key length must be 32")
+    return c25.encode(c25.scale(c25.ladder8(c25.decodeEd(pk), util.bits8(sk))))
+end
+
 return mod

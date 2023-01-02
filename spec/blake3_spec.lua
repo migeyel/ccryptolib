@@ -24,15 +24,15 @@ describe("blake3.digest", function()
 
         -- Length
         expect.error(blake3.digest, "", 0.5)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
         expect.error(blake3.digest, "", 0)
-            :eq("length must be positive")
+            :eq("desired output length must be positive")
         expect.error(blake3.digest, "", 1 / 0)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
         expect.error(blake3.digest, "", -1 / 0)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
         expect.error(blake3.digest, "", 0 / 0)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
     end)
 
     if not hasVecs then
@@ -68,15 +68,15 @@ describe("blake3.digestKeyed", function()
 
         -- Length
         expect.error(blake3.digestKeyed, key, "", 0.5)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
         expect.error(blake3.digestKeyed, key, "", 0)
-            :eq("length must be positive")
+            :eq("desired output length must be positive")
         expect.error(blake3.digestKeyed, key, "", 1 / 0)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
         expect.error(blake3.digestKeyed, key, "", -1 / 0)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
         expect.error(blake3.digestKeyed, key, "", 0 / 0)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
     end)
 
     if not hasVecs then
@@ -107,15 +107,15 @@ describe("blake3.deriveKey", function()
 
         -- Length
         expect.error(blake3.deriveKey(""), "", 0.5)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
         expect.error(blake3.deriveKey(""), "", 0)
-            :eq("length must be positive")
+            :eq("desired output length must be positive")
         expect.error(blake3.deriveKey(""), "", 1 / 0)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
         expect.error(blake3.deriveKey(""), "", -1 / 0)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
         expect.error(blake3.deriveKey(""), "", 0 / 0)
-            :eq("length must be an integer")
+            :eq("desired output length must be an integer")
     end)
 
     if not hasVecs then

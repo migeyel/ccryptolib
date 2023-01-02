@@ -1,3 +1,8 @@
+local function lassert(val, err, level)
+    if not val then error(err, level + 1) end
+    return val
+end
+
 --- Converts a little-endian array from one power-of-two base to another.
 --
 -- @tparam {number...} a The array to convert, in little-endian.
@@ -65,6 +70,7 @@ local function bits8(str)
 end
 
 return {
+    lassert = lassert,
     rebaseLE = rebaseLE,
     bits = bits,
     bits8 = bits8,

@@ -4,7 +4,7 @@
 --
 
 local expect  = require "cc.expect".expect
-local random  = require "ccryptolib.random"
+local lassert = require "ccryptolib.internal.util".lassert
 local packing = require "ccryptolib.internal.packing"
 
 local u4x4, fmt4x4 = packing.compileUnpack("<I4I4I4I4")
@@ -20,7 +20,7 @@ local mod = {}
 --
 function mod.mac(key, message)
     expect(1, key, "string")
-    if #key ~= 32 then error("key length must be 32", 2) end
+    lassert(#key == 32, "key length must be 32", 2)
     expect(2, message, "string")
 
     -- Pad message.
@@ -133,20 +133,6 @@ function mod.mac(key, message)
 
     -- Encode.
     return p4x4(fmt4x4, u0, u1 / 2 ^ 32, u2 / 2 ^ 64, u3 / 2 ^ 96)
-end
-
-local mac = mod.mac
-
---- Verifies a Poly1305 tag.
---
--- @tparam string key The key used to generate the tag.
--- @tparam string message The message to authenticate.
--- @tparam string tag The tag to check.
--- @treturn boolean Whether the tag is valid or not.
---
-function mod.verify(key, message, tag)
-    local kaux = random.random(32)
-    return mac(kaux, tag) == mac(kaux, mac(key, message))
 end
 
 return mod

@@ -4,6 +4,7 @@
 --
 
 local expect  = require "cc.expect".expect
+local lassert = require "ccryptolib.internal.util".lassert
 local packing = require "ccryptolib.internal.packing"
 
 local rol = bit32.lrotate
@@ -110,8 +111,8 @@ local function pbkdf2(password, salt, iter)
     expect(1, password, "string")
     expect(2, salt, "string")
     expect(3, iter, "number")
-    assert(iter % 1 == 0, "iteration number must be an integer")
-    assert(iter > 0, "iteration number must be positive")
+    lassert(iter % 1 == 0, "iteration number must be an integer", 2)
+    lassert(iter > 0, "iteration number must be positive", 2)
 
     -- Pad password.
     if #password > 64 then password = digest(password) end

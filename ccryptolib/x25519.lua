@@ -4,6 +4,7 @@
 --
 
 local expect = require "cc.expect".expect
+local lassert = require "ccryptolib.internal.util".lassert
 local util   = require "ccryptolib.internal.util"
 local c25    = require "ccryptolib.internal.curve25519"
 
@@ -28,18 +29,18 @@ end
 --
 function mod.exchange(sk, pk)
     expect(1, sk, "string")
-    assert(#sk == 32, "secret key length must be 32")
+    lassert(#sk == 32, "secret key length must be 32", 2)
     expect(2, pk, "string")
-    assert(#pk == 32, "public key length must be 32")
+    lassert(#pk == 32, "public key length must be 32", 2)
     return c25.encode(c25.scale(c25.ladder8(c25.decode(pk), util.bits8(sk))))
 end
 
 --- Same as @{exchange}, but decodes the public key as an Edwards25519 point.
 function mod.exchangeEd(sk, pk)
     expect(1, sk, "string")
-    assert(#sk == 32, "secret key length must be 32")
+    lassert(#sk == 32, "secret key length must be 32", 2)
     expect(2, pk, "string")
-    assert(#pk == 32, "public key length must be 32")
+    lassert(#pk == 32, "public key length must be 32", 2)
     return c25.encode(c25.scale(c25.ladder8(c25.decodeEd(pk), util.bits8(sk))))
 end
 

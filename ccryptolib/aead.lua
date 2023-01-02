@@ -4,6 +4,7 @@
 --
 
 local expect   = require "cc.expect".expect
+local lassert = require "ccryptolib.internal.util".lassert
 local packing  = require "ccryptolib.internal.packing"
 local chacha20 = require "ccryptolib.chacha20"
 local poly1305 = require "ccryptolib.poly1305"
@@ -11,7 +12,6 @@ local poly1305 = require "ccryptolib.poly1305"
 local p8x1, fmt8x1 = packing.compilePack("<I8")
 local u4x4, fmt4x4 = packing.compileUnpack("<I4I4I4I4")
 local bxor = bit32.bxor
-local bor = bit32.bor
 
 --- Encrypts a message.
 --
@@ -25,15 +25,15 @@ local bor = bit32.bor
 --
 local function encrypt(key, nonce, message, aad, rounds)
     expect(1, key, "string")
-    if #key ~= 32 then error("key length must be 32", 2) end
+    lassert(#key == 32, "key length must be 32", 2)
     expect(2, nonce, "string")
-    if #nonce ~= 12 then error("nonce length must be 12", 2) end
+    lassert(#nonce == 12, "nonce length must be 12", 2)
     expect(3, message, "string")
     expect(4, aad, "string")
     rounds = expect(5, rounds, "number", "nil") or 20
-    if rounds % 2 ~= 0 then error("round number must be even", 2) end
-    if rounds < 8 then error("round number must be no smaller than 8", 2) end
-    if rounds > 20 then error("round number must be no larger than 20", 2) end
+    lassert(rounds % 2 == 0, "round number must be even", 2)
+    lassert(rounds >= 8, "round number must be no smaller than 8", 2)
+    lassert(rounds <= 20, "round number must be no larger than 20", 2)
 
     -- Generate auth key and encrypt.
     local msgLong = ("\0"):rep(64) .. message
@@ -65,17 +65,17 @@ end
 --
 local function decrypt(key, nonce, tag, ciphertext, aad, rounds)
     expect(1, key, "string")
-    if #key ~= 32 then error("key length must be 32", 2) end
+    lassert(#key == 32, "key length must be 32", 2)
     expect(2, nonce, "string")
-    if #nonce ~= 12 then error("nonce length must be 12", 2) end
+    lassert(#nonce == 12, "nonce length must be 12", 2)
     expect(3, tag, "string")
-    if #tag ~= 16 then error("tag length must be 16", 2) end
+    lassert(#tag == 16, "tag length must be 16", 2)
     expect(4, ciphertext, "string")
     expect(5, aad, "string")
     rounds = expect(6, rounds, "number", "nil") or 20
-    if rounds % 2 ~= 0 then error("round number must be even", 2) end
-    if rounds < 8 then error("round number must be no smaller than 8", 2) end
-    if rounds > 20 then error("round number must be no larger than 20", 2) end
+    lassert(rounds % 2 == 0, "round number must be even", 2)
+    lassert(rounds >= 8, "round number must be no smaller than 8", 2)
+    lassert(rounds <= 20, "round number must be no larger than 20", 2)
 
     -- Generate auth key.
     local authKey = chacha20.crypt(key, nonce, ("\0"):rep(32), rounds, 0)

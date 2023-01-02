@@ -4,6 +4,7 @@
 --
 
 local expect = require "cc.expect".expect
+local lassert = require "ccryptolib.internal.util".lassert
 local fq     = require "ccryptolib.internal.fq"
 local sha512 = require "ccryptolib.internal.sha512"
 local ed     = require "ccryptolib.internal.edwards25519"
@@ -35,9 +36,9 @@ end
 --
 function mod.sign(sk, pk, msg)
     expect(1, sk, "string")
-    assert(#sk == 32, "secret key length must be 32")
+    lassert(#sk == 32, "secret key length must be 32", 2)
     expect(2, pk, "string")
-    assert(#pk == 32, "public key length must be 32")
+    lassert(#pk == 32, "public key length must be 32", 2)
     expect(3, msg, "string")
 
     -- Secret key.
@@ -69,10 +70,10 @@ end
 --
 function mod.verify(pk, msg, sig)
     expect(1, pk, "string")
-    assert(#pk == 32, "public key length must be 32")
+    lassert(#pk == 32, "public key length must be 32", 2)
     expect(2, msg, "string")
     expect(3, sig, "string")
-    assert(#sig == 64, "signature length must be 64")
+    lassert(#sig == 64, "signature length must be 64", 2)
 
     local y = ed.decode(pk)
     if not y then return nil end

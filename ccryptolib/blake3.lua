@@ -4,6 +4,7 @@
 --
 
 local expect  = require "cc.expect".expect
+local lassert = require "ccryptolib.internal.util".lassert
 local packing = require "ccryptolib.internal.packing"
 
 local unpack = unpack or table.unpack
@@ -125,12 +126,12 @@ end
 local function expand(state, len, offset)
     expect(1, state, "table")
     expect(1, len, "number")
-    if len % 1 ~= 0 then error("length must be an integer", 2) end
-    if len < 1 then error("length must be positive", 2) end
+    lassert(len % 1 == 0, "desired output length must be an integer", 2)
+    lassert(len >= 1, "desired output length must be positive", 2)
     offset = expect(2, offset, "nil", "number") or 0
-    if offset % 1 ~= 0 then error("offset must be an integer", 2) end
-    if offset < 0 then error("offset must be nonnegative", 2) end
-    if offset + len > 2 ^ 32 then error("offset is too large", 2) end
+    lassert(offset % 1 == 0, "offset must be an integer", 2)
+    lassert(offset >= 0, "offset must be nonnegative", 2)
+    lassert(offset + len <= 2 ^ 32, "offset is too large", 2)
 
     -- Expand output.
     local out = {}
@@ -276,7 +277,7 @@ end
 
 function mod.newKeyed(key)
     expect(1, key, "string")
-    if #key ~= 32 then error("key length must be 32", 2) end
+    lassert(#key == 32, "key length must be 32", 2)
     return new({u8x4(fmt8x4, key, 1)}, KEYED_HASH)
 end
 
@@ -295,8 +296,8 @@ end
 function mod.digest(message, len)
     expect(1, message, "string")
     len = expect(2, len, "number", "nil") or 32
-    if len % 1 ~= 0 then error("length must be an integer", 2) end
-    if len < 1 then error("length must be positive", 2) end
+    lassert(len % 1 == 0, "desired output length must be an integer", 2)
+    lassert(len >= 1, "desired output length must be positive", 2)
     return new(IV, 0):update(message):finalize():expand(len)
 end
 
@@ -309,11 +310,11 @@ end
 --
 function mod.digestKeyed(key, message, len)
     expect(1, key, "string")
-    if #key ~= 32 then error("key length must be 32", 2) end
+    lassert(#key == 32, "key length must be 32", 2)
     expect(2, message, "string")
     len = expect(3, len, "number", "nil") or 32
-    if len % 1 ~= 0 then error("length must be an integer", 2) end
-    if len < 1 then error("length must be positive", 2) end
+    lassert(len % 1 == 0, "desired output length must be an integer", 2)
+    lassert(len >= 1, "desired output length must be positive", 2)
     local h = new({u8x4(fmt8x4, key, 1)}, KEYED_HASH)
     return h:update(message):finalize():expand(len)
 end
@@ -330,8 +331,8 @@ function mod.deriveKey(context)
     return function(material, len)
         expect(1, material, "string")
         len = expect(2, len, "number", "nil") or 32
-        if len % 1 ~= 0 then error("length must be an integer", 2) end
-        if len < 1 then error("length must be positive", 2) end
+        lassert(len % 1 == 0, "desired output length must be an integer", 2)
+        lassert(len >= 1, "desired output length must be positive", 2)
         local h = new({u8x4(fmt8x4, iv, 1)}, DERIVE_KEY_MATERIAL)
         return h:update(material):finalize():expand(len)
     end

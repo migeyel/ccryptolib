@@ -1,4 +1,5 @@
 local expect = require "cc.expect".expect
+local lassert = require "ccryptolib.internal.util".lassert
 local fq     = require "ccryptolib.internal.fq"
 local fp     = require "ccryptolib.internal.fp"
 local c25    = require "ccryptolib.internal.curve25519"
@@ -9,7 +10,7 @@ local random = require "ccryptolib.random"
 --- Masks an exchange secret key.
 local function maskX(sk)
     expect(1, sk, "string")
-    assert(#sk == 32, "secret key length must be 32")
+    lassert(#sk == 32, "secret key length must be 32", 2)
     local mask = random.random(32)
     local x = fq.decodeClamped(sk)
     local r = fq.decodeClamped(mask)
@@ -20,14 +21,14 @@ end
 --- Masks a signature secret key.
 function maskS(sk)
     expect(1, sk, "string")
-    assert(#sk == 32, "secret key length must be 32")
+    lassert(#sk == 32, "secret key length must be 32", 2)
     return maskX(sha512.digest(sk):sub(1, 32))
 end
 
 --- Rerandomizes the masking on a masked key.
 local function remask(sk)
     expect(1, sk, "string")
-    assert(#sk == 64, "masked secret key length must be 64")
+    lassert(#sk == 64, "masked secret key length must be 64", 2)
     local newMask = random.random(32)
     local xr = fq.decode(sk:sub(1, 32))
     local r = fq.decodeClamped(sk:sub(33))
@@ -44,7 +45,7 @@ end
 --
 local function ephemeralSk(sk)
     expect(1, sk, "string")
-    assert(#sk == 64, "masked secret key length must be 64")
+    lassert(#sk == 64, "masked secret key length must be 64", 2)
     return sk:sub(33)
 end
 
@@ -109,14 +110,14 @@ end
 --- Returns the X25519 public key of this masked key.
 local function publicKeyX(sk)
     expect(1, sk, "string")
-    assert(#sk == 64, "masked secret key length must be 64")
+    lassert(#sk == 64, "masked secret key length must be 64", 2)
     return (exchangeOnPoint(sk, c25.G))
 end
 
 --- Returns the Ed25519 public key of this masked key.
 local function publicKeyS(sk)
     expect(1, sk, "string")
-    assert(#sk == 64, "masked secret key length must be 64")
+    lassert(#sk == 64, "masked secret key length must be 64", 2)
     local xr = fq.decode(sk:sub(1, 32))
     local r = fq.decodeClamped(sk:sub(33))
     local y = ed.add(ed.mulG(fq.bits(xr)), ed.niels(ed.mulG(fq.bits(r))))
@@ -134,9 +135,9 @@ end
 --
 local function exchangeX(sk, pk)
     expect(1, sk, "string")
-    assert(#sk == 64, "masked secret key length must be 64")
+    lassert(#sk == 64, "masked secret key length must be 64", 2)
     expect(2, pk, "string")
-    assert(#pk == 32, "public key length must be 32")
+    lassert(#pk == 32, "public key length must be 32", 2)
     return exchangeOnPoint(sk, c25.decode(pk))
 end
 
@@ -148,18 +149,18 @@ end
 --
 local function exchangeS(sk, pk)
     expect(1, sk, "string")
-    assert(#sk == 64, "masked secret key length must be 64")
+    lassert(#sk == 64, "masked secret key length must be 64", 2)
     expect(2, pk, "string")
-    assert(#pk == 32, "public key length must be 32")
+    lassert(#pk == 32, "public key length must be 32", 2)
     return exchangeOnPoint(sk, c25.decodeEd(pk))
 end
 
 --- Signs a message using Ed25519.
 local function sign(sk, pk, msg)
     expect(1, sk, "string")
-    assert(#sk == 64, "masked secret key length must be 64")
+    lassert(#sk == 64, "masked secret key length must be 64", 2)
     expect(2, pk, "string")
-    assert(#pk == 32, "public key length must be 32")
+    lassert(#pk == 32, "public key length must be 32", 2)
     expect(3, msg, "string")
 
     -- Secret key.

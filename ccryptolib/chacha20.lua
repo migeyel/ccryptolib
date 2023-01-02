@@ -4,6 +4,7 @@
 --
 
 local expect  = require "cc.expect".expect
+local lassert = require "ccryptolib.internal.util".lassert
 local packing = require "ccryptolib.internal.packing"
 
 local bxor = bit32.bxor
@@ -26,18 +27,18 @@ local mod = {}
 --
 function mod.crypt(key, nonce, message, rounds, offset)
     expect(1, key, "string")
-    if #key ~= 32 then error("key length must be 32", 2) end
+    lassert(#key == 32, "key length must be 32", 2)
     expect(2, nonce, "string")
-    if #nonce ~= 12 then error("nonce length must be 12", 2) end
+    lassert(#nonce == 12, "nonce length must be 12", 2)
     expect(3, message, "string")
     rounds = expect(4, rounds, "number", "nil") or 20
-    if rounds % 2 ~= 0 then error("round number must be even", 2) end
-    if rounds < 8 then error("round number must be no smaller than 8", 2) end
-    if rounds > 20 then error("round number must be no larger than 20", 2) end
+    lassert(rounds % 2 == 0, "round number must be even", 2)
+    lassert(rounds >= 8, "round number must be no smaller than 8", 2)
+    lassert(rounds <= 20, "round number must be no larger than 20", 2)
     offset = expect(5, offset, "number", "nil") or 1
-    if offset % 1 ~= 0 then error("offset must be an integer", 2) end
-    if offset < 0 then error("offset must be nonnegative", 2) end
-    if #message + 64 * offset >= 2 ^ 37 then error("offset too large", 2) end
+    lassert(offset % 1 == 0, "offset must be an integer", 2)
+    lassert(offset >= 0, "offset must be nonnegative", 2)
+    lassert(#message + 64 * offset <= 2 ^ 38, "offset too large", 2)
 
     -- Build the state block.
     local i0, i1, i2, i3 = 0x61707865, 0x3320646e, 0x79622d32, 0x6b206574

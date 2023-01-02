@@ -20,7 +20,7 @@ local ufq = packing.compileUnpack(fmtfq)
 local ufql, fmtfql = packing.compileUnpack("<I3I3I3I3I3I3I3I3I3I3I3")
 local ufqh, fmtfqh = packing.compileUnpack("<I3I3I3I3I3I3I3I3I3I3I1")
 
---- The scalar field's order, q.
+--- The scalar field's order, q = 2²⁵² + 27742317777372353535851937790883648493.
 local Q = {
     16110573,
     06494812,
@@ -66,17 +66,17 @@ local T1 = {
 }
 
 local T8 = {
-    01130678,
-    05563041,
-    03870191,
-    01622646,
-    01247520,
-    12151703,
-    16693196,
-    09337410,
-    04700637,
-    07308819,
-    00002083,
+    5110253,
+    3039345,
+    2503500,
+    11779568,
+    15416472,
+    16766550,
+    16777215,
+    16777215,
+    16777215,
+    16777215,
+    4095,
 }
 
 local ZERO = mp.num(0)
@@ -139,7 +139,7 @@ end
 --
 -- @tparam {number...} a A number a as 11 limbs in [0..2²⁴).
 -- @tparam {number...} b A number b < q as 11 limbs in [0..2²⁴).
--- @treturn 2⁻²⁶⁴ × a × b mod q as 11 limbs in [0..2²⁴).
+-- @treturn {number...} 2⁻²⁶⁴ × a × b mod q as 11 limbs in [0..2²⁴).
 --
 local function mul(a, b)
     local t0, t1 = mp.mul(a, b)
@@ -226,22 +226,12 @@ local function decodeClamped(str)
     return montgomery(words)
 end
 
---- Decodes a scalar using the X25519/Ed25519 bit clamping scheme and division
--- by 8.
+--- Divides a scalar by 8.
 --
--- @tparam string str A 32-byte string encoding some little-endian number a.
--- @treturn {number...} 2²⁶⁴ × clamp(a) ÷ 8 mod q as 11 limbs in [0..2²⁴).
---
-local function decodeClamped8(str)
-    -- Decode.
-    local words = {ufq(fmtfq, str, 1)} words[12] = nil
-
-    -- Clamp.
-    words[1] = bit32.band(words[1], 0xfffff8)
-    words[11] = bit32.band(words[11], 0x7fff)
-    words[11] = bit32.bor(words[11], 0x4000)
-
-    return mul(words, T8)
+-- @tparam {number...} 2²⁶⁴ × a mod q as 11 limbs in [0..2²⁴).
+-- @treturn {number...} 2²⁶⁵ × a ÷ 8 mod q as 11 limbs in [0..2²⁴).
+local function eighth(a)
+    return mul(a, T8)
 end
 
 --- Returns a scalar in binary.
@@ -398,8 +388,8 @@ return {
     encode = encode,
     decode = decode,
     decodeWide = decodeWide,
-    decodeClamped8 = decodeClamped8,
     decodeClamped = decodeClamped,
+    eighth = eighth,
     bits = bits,
     makeRuleset = makeRuleset,
 }

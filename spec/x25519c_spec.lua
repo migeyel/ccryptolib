@@ -7,9 +7,9 @@ local util = require "spec.util"
 local x25519c = require "ccryptolib.x25519c"
 
 local function exchange(sk, pk)
-    local sk, ek = x25519c.mask(sk)
-    sk, ek = x25519c.remask(sk, ek)
-    return (x25519c.exchange(sk, ek, pk))
+    local sk = x25519c.maskExchangeSk(sk)
+    sk = x25519c.remask(sk)
+    return (x25519c.exchange(sk, pk))
 end
 
 describe("x25519c.exchange", function()

@@ -276,6 +276,7 @@ return {
     add = add,
     sub = sub,
     niels = niels,
+    scale = scale,
     encode = encode,
     decode = decode,
     mulG = mulG,

@@ -2,35 +2,56 @@ local expect = require "cc.expect".expect
 local fq     = require "ccryptolib.internal.fq"
 local fp     = require "ccryptolib.internal.fp"
 local c25    = require "ccryptolib.internal.curve25519"
+local ed     = require "ccryptolib.internal.edwards25519"
+local sha512 = require "ccryptolib.internal.sha512"
 local random = require "ccryptolib.random"
 
-local function mask(sk)
+--- Transforms an X25519 secret key into a masked key.
+local function maskExchangeSk(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
     local mask = random.random(32)
-    local x = fq.decodeClamped8(sk)
-    local r = fq.decodeClamped8(mask)
+    local x = fq.decodeClamped(sk)
+    local r = fq.decodeClamped(mask)
     local xr = fq.sub(x, r)
-    return fq.encode(xr), mask
+    return fq.encode(xr) .. mask
 end
 
-local function remask(msk, oldMask)
-    expect(1, msk, "string")
-    assert(#msk == 32, "masked secret key length must be 32")
-    expect(2, oldMask, "string")
-    assert(#oldMask == 32, "old mask length must be 32")
+--- Transforms an Ed25519 secret key into a masked key.
+function maskSignatureSk(sk)
+    expect(1, sk, "string")
+    assert(#sk == 32, "secret key length must be 32")
+    return maskExchangeSk(sha512.digest(sk):sub(1, 32))
+end
+
+--- Rerandomizes the masking on a masked key.
+local function remask(sk)
+    expect(1, sk, "string")
+    assert(#sk == 64, "masked secret key length must be 64")
     local newMask = random.random(32)
-    local xr = fq.decode(msk)
-    local r = fq.decodeClamped8(oldMask)
-    local s = fq.decodeClamped8(newMask)
+    local xr = fq.decode(sk:sub(1, 32))
+    local r = fq.decodeClamped(sk:sub(33))
+    local s = fq.decodeClamped(newMask)
     local xs = fq.add(xr, fq.sub(r, s))
-    return fq.encode(xs), newMask
+    return fq.encode(xs) .. newMask
 end
 
-local function exchangeOnPoint(msk, mask, P)
-    local xr = fq.decode(msk)
-    local r = fq.decodeClamped8(mask)
-    local rP, xrP, dP = c25.prac(P, fq.makeRuleset(r, xr))
+--- Returns the ephemeral exchange secret key of this masked key.
+--
+-- This is the second secret key in the "double key exchange" in @{exchange},
+-- the first being the key that has been masked. The ephemeral key changes every
+-- time @{remask} is called.
+--
+local function exchangeEsk(sk)
+    expect(1, sk, "string")
+    assert(#sk == 64, "masked secret key length must be 64")
+    return sk:sub(33)
+end
+
+local function exchangeOnPoint(sk, P)
+    local xr = fq.decode(sk:sub(1, 32))
+    local r = fq.decodeClamped(sk:sub(33))
+    local rP, xrP, dP = c25.prac(P, fq.makeRuleset(fq.eighth(r), fq.eighth(xr)))
 
     -- Return early if P has small order or if r = xr. (1)
     if not rP then
@@ -79,7 +100,24 @@ local function exchangeOnPoint(msk, mask, P)
     return fp.encode(fp.mul(xPx, xPzInv)), fp.encode(fp.mul(rPx, rPzInv))
 end
 
---- Treats both shares as X25519 keys and performs a double key exchange.
+--- Returns the X25519 public key of this masked key.
+local function exchangePk(sk)
+    expect(1, sk, "string")
+    assert(#sk == 64, "masked secret key length must be 64")
+    return (exchangeOnPoint(sk, c25.G))
+end
+
+--- Returns the Ed25519 public key of this masked key.
+local function signaturePk(sk)
+    expect(1, sk, "string")
+    assert(#sk == 64, "masked secret key length must be 64")
+    local xr = fq.decode(sk:sub(1, 32))
+    local r = fq.decodeClamped(sk:sub(33))
+    local y = ed.add(ed.mulG(fq.bits(xr)), ed.niels(ed.mulG(fq.bits(r))))
+    return ed.encode(ed.scale(y))
+end
+
+--- Performs a double key exchange.
 --
 -- Returns 0 if the input public key has small order or if it isn't in the base
 -- curve. This is different from standard X25519, which performs the exchange
@@ -88,30 +126,62 @@ end
 -- May incorrectly return 0 with negligible chance if the mask happens to match
 -- the masked key. I haven't checked if clamping prevents that from happening.
 --
-local function exchange(msk, mask, pk)
-    expect(1, msk, "string")
-    assert(#msk == 32, "masked secret key length must be 32")
-    expect(2, mask, "string")
-    assert(#mask == 32, "mask length must be 32")
-    expect(3, pk, "string")
+local function exchange(sk, pk)
+    expect(1, sk, "string")
+    assert(#sk == 64, "masked secret key length must be 64")
+    expect(2, pk, "string")
     assert(#pk == 32, "public key length must be 32")
-    return exchangeOnPoint(msk, mask, c25.decode(pk))
+    return exchangeOnPoint(sk, c25.decode(pk))
 end
 
---- Same as @{exchange}, but decodes the public key as an Edwards25519 point.
-local function exchangeEd(msk, mask, pk)
-    expect(1, msk, "string")
-    assert(#msk == 32, "masked secret key length must be 32")
-    expect(2, mask, "string")
-    assert(#mask == 32, "mask length must be 32")
-    expect(3, pk, "string")
+--- Performs an exchange against an Ed25519 key.
+--
+-- This is done by converting the key into X25519 before passing it to the
+-- regular exchange. Using this function on the result of @{signaturePk} leads
+-- to the same value as using @{exchange} on the result of @{exchangePk}.
+--
+local function exchangeEd(sk, pk)
+    expect(1, sk, "string")
+    assert(#sk == 64, "masked secret key length must be 64")
+    expect(2, pk, "string")
     assert(#pk == 32, "public key length must be 32")
-    return exchangeOnPoint(msk, mask, c25.decodeEd(pk))
+    return exchangeOnPoint(sk, c25.decodeEd(pk))
+end
+
+--- Signs a message using Ed25519.
+local function sign(sk, pk, msg)
+    expect(1, sk, "string")
+    assert(#sk == 64, "masked secret key length must be 64")
+    expect(2, pk, "string")
+    assert(#pk == 32, "public key length must be 32")
+    expect(3, msg, "string")
+
+    -- Secret key.
+    local xr = fq.decode(sk:sub(1, 32))
+    local r = fq.decodeClamped(sk:sub(33))
+
+    -- Commitment.
+    local k = fq.decodeWide(random.random(64))
+    local rStr = ed.encode(ed.mulG(fq.bits(k)))
+
+    -- Challenge.
+    local e = fq.decodeWide(sha512.digest(rStr .. pk .. msg))
+
+    -- Response.
+    local s = fq.add(fq.add(k, fq.mul(xr, e)), fq.mul(r, e))
+    local sStr = fq.encode(s)
+
+    return rStr .. sStr
 end
 
 return {
-    mask = mask,
+    maskExchangeSk = maskExchangeSk,
+    maskSignatureSk = maskSignatureSk,
     remask = remask,
+    exchangePk = exchangePk,
+    exchangeEsk = exchangeEsk,
+    signaturePk = signaturePk,
     exchange = exchange,
     exchangeEd = exchangeEd,
+    sign = sign,
 }

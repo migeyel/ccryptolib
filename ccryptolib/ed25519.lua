@@ -11,6 +11,11 @@ local random = require "ccryptolib.random"
 
 local mod = {}
 
+--- Converts a signing key to an equivalent exchange key.
+function mod.exchangeKey(sk)
+    return sha512.digest(sk):sub(1, 32)
+end
+
 --- Computes a public key from a secret key.
 --
 -- @tparam string sk A random 32-byte secret key.

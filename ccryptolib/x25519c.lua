@@ -6,8 +6,8 @@ local ed     = require "ccryptolib.internal.edwards25519"
 local sha512 = require "ccryptolib.internal.sha512"
 local random = require "ccryptolib.random"
 
---- Transforms an X25519 secret key into a masked key.
-local function maskExchangeSk(sk)
+--- Masks an exchange secret key.
+local function maskX(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
     local mask = random.random(32)
@@ -17,11 +17,11 @@ local function maskExchangeSk(sk)
     return fq.encode(xr) .. mask
 end
 
---- Transforms an Ed25519 secret key into a masked key.
-function maskSignatureSk(sk)
+--- Masks a signature secret key.
+function maskS(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
-    return maskExchangeSk(sha512.digest(sk):sub(1, 32))
+    return maskX(sha512.digest(sk):sub(1, 32))
 end
 
 --- Rerandomizes the masking on a masked key.
@@ -42,7 +42,7 @@ end
 -- the first being the key that has been masked. The ephemeral key changes every
 -- time @{remask} is called.
 --
-local function exchangeEsk(sk)
+local function ephemeralSk(sk)
     expect(1, sk, "string")
     assert(#sk == 64, "masked secret key length must be 64")
     return sk:sub(33)
@@ -107,14 +107,14 @@ local function exchangeOnPoint(sk, P)
 end
 
 --- Returns the X25519 public key of this masked key.
-local function exchangePk(sk)
+local function publicKeyX(sk)
     expect(1, sk, "string")
     assert(#sk == 64, "masked secret key length must be 64")
     return (exchangeOnPoint(sk, c25.G))
 end
 
 --- Returns the Ed25519 public key of this masked key.
-local function signaturePk(sk)
+local function publicKeyS(sk)
     expect(1, sk, "string")
     assert(#sk == 64, "masked secret key length must be 64")
     local xr = fq.decode(sk:sub(1, 32))
@@ -132,7 +132,7 @@ end
 -- May incorrectly return 0 with negligible chance if the mask happens to match
 -- the masked key. I haven't checked if clamping prevents that from happening.
 --
-local function exchange(sk, pk)
+local function exchangeX(sk, pk)
     expect(1, sk, "string")
     assert(#sk == 64, "masked secret key length must be 64")
     expect(2, pk, "string")
@@ -146,7 +146,7 @@ end
 -- regular exchange. Using this function on the result of @{signaturePk} leads
 -- to the same value as using @{exchange} on the result of @{exchangePk}.
 --
-local function exchangeEd(sk, pk)
+local function exchangeS(sk, pk)
     expect(1, sk, "string")
     assert(#sk == 64, "masked secret key length must be 64")
     expect(2, pk, "string")
@@ -181,13 +181,13 @@ local function sign(sk, pk, msg)
 end
 
 return {
-    maskExchangeSk = maskExchangeSk,
-    maskSignatureSk = maskSignatureSk,
+    maskX = maskX,
+    maskS = maskS,
     remask = remask,
-    exchangePk = exchangePk,
-    exchangeEsk = exchangeEsk,
-    signaturePk = signaturePk,
-    exchange = exchange,
-    exchangeEd = exchangeEd,
+    publicKeyX = publicKeyX,
+    ephemeralSk = ephemeralSk,
+    publicKeyS = publicKeyS,
+    exchangeX = exchangeX,
+    exchangeS = exchangeS,
     sign = sign,
 }

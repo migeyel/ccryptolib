@@ -7,12 +7,12 @@ local util = require "spec.util"
 local x25519c = require "ccryptolib.x25519c"
 
 local function exchange(sk, pk)
-    local sk = x25519c.maskExchangeSk(sk)
+    local sk = x25519c.maskX(sk)
     sk = x25519c.remask(sk)
-    return (x25519c.exchange(sk, pk))
+    return (x25519c.exchangeX(sk, pk))
 end
 
-describe("x25519c.exchange", function()
+describe("x25519c.exchangeX", function()
     it("passes the section 5.2 test vector #1", function()
         local x = util.hexcat {
             "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4",

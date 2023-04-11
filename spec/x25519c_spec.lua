@@ -6,6 +6,8 @@
 local util = require "spec.util"
 local x25519c = require "ccryptolib.x25519c"
 
+require "ccryptolib.random".init("mock initialization")
+
 local function exchange(sk, pk)
     local sk = x25519c.maskX(sk)
     sk = x25519c.remask(sk)

@@ -6,6 +6,8 @@
 local util = require "spec.util"
 local x25519 = require "ccryptolib.x25519"
 
+require "ccryptolib.random".init("mock initialization")
+
 describe("x25519.exchange", function()
     it("passes the section 5.2 test vector #1", function()
         local x = util.hexcat {

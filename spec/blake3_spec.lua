@@ -5,8 +5,7 @@
 
 local util = require "spec.util"
 local blake3 = require "ccryptolib.blake3"
-
-local hasVecs, vecs = pcall(require, "spec.bigvec.blake3")
+local vecs = require "spec.vec.blake3"
 
 local function mkInput(len)
     local out = {}
@@ -35,19 +34,15 @@ describe("blake3.digest", function()
             :eq("desired output length must be an integer")
     end)
 
-    if not hasVecs then
-        pending("passes the BLAKE3 official test vectors")
-    else
-        it("passes the BLAKE3 official test vectors", function()
-            local cases = vecs.cases
-            for i = 1, #cases do
-                local input = mkInput(cases[i].inputLen)
-                local hash = util.hexcat { cases[i].hash }
-                expect(blake3.digest(input, #hash)):eq(hash)
-                expect(blake3.digest(input)):eq(hash:sub(1, 32))
-            end
-        end)
-    end
+    it("passes the BLAKE3 official test vectors", function()
+        local cases = vecs.cases
+        for i = 1, #cases do
+            local input = mkInput(cases[i].inputLen)
+            local hash = util.hexcat { cases[i].hash }
+            expect(blake3.digest(input, #hash)):eq(hash)
+            expect(blake3.digest(input)):eq(hash:sub(1, 32))
+        end
+    end)
 end)
 
 describe("blake3.digestKeyed", function()
@@ -79,20 +74,16 @@ describe("blake3.digestKeyed", function()
             :eq("desired output length must be an integer")
     end)
 
-    if not hasVecs then
-        pending("passes the BLAKE3 official test vectors")
-    else
-        it("passes the BLAKE3 official test vectors", function()
-            local key = vecs.key
-            local cases = vecs.cases
-            for i = 1, #cases do
-                local input = mkInput(cases[i].inputLen)
-                local keyedHash = util.hexcat { cases[i].keyedHash }
-                expect(blake3.digestKeyed(key, input, #keyedHash)):eq(keyedHash)
-                expect(blake3.digestKeyed(key, input)):eq(keyedHash:sub(1, 32))
-            end
-        end)
-    end
+    it("passes the BLAKE3 official test vectors", function()
+        local key = vecs.key
+        local cases = vecs.cases
+        for i = 1, #cases do
+            local input = mkInput(cases[i].inputLen)
+            local keyedHash = util.hexcat { cases[i].keyedHash }
+            expect(blake3.digestKeyed(key, input, #keyedHash)):eq(keyedHash)
+            expect(blake3.digestKeyed(key, input)):eq(keyedHash:sub(1, 32))
+        end
+    end)
 end)
 
 describe("blake3.deriveKey", function()
@@ -118,20 +109,16 @@ describe("blake3.deriveKey", function()
             :eq("desired output length must be an integer")
     end)
 
-    if not hasVecs then
-        pending("passes the BLAKE3 official test vectors")
-    else
-        it("passes the BLAKE3 official test vectors", function()
-            local contextString = vecs.contextString
-            local cases = vecs.cases
-            for i = 1, #cases do
-                local input = mkInput(cases[i].inputLen)
-                local deriveKey = util.hexcat { cases[i].deriveKey }
-                expect(blake3.deriveKey(contextString)(input, #deriveKey))
-                    :eq(deriveKey)
-                expect(blake3.deriveKey(contextString)(input))
-                    :eq(deriveKey:sub(1, 32))
-            end
-        end)
-    end
+    it("passes the BLAKE3 official test vectors", function()
+        local contextString = vecs.contextString
+        local cases = vecs.cases
+        for i = 1, #cases do
+            local input = mkInput(cases[i].inputLen)
+            local deriveKey = util.hexcat { cases[i].deriveKey }
+            expect(blake3.deriveKey(contextString)(input, #deriveKey))
+                :eq(deriveKey)
+            expect(blake3.deriveKey(contextString)(input))
+                :eq(deriveKey:sub(1, 32))
+        end
+    end)
 end)

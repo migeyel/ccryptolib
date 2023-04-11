@@ -6,8 +6,8 @@
 local util = require "spec.util"
 local sha256 = require "ccryptolib.sha256"
 
-local hasShort, shortMsg = pcall(require, "spec.bigvec.sha256short")
-local hasLong, longMsg = pcall(require, "spec.bigvec.sha256long")
+local shortMsg = require "spec.vec.sha256.short"
+local longMsg = require "spec.vec.sha256.long"
 
 describe("sha256.digest", function()
     it("validates arguments", function()
@@ -15,31 +15,23 @@ describe("sha256.digest", function()
             :eq("bad argument #1 (expected string, got nil)")
     end)
 
-    if not hasShort then
-        pending("passes the NIST SHAVS byte-oriented short messages test")
-    else
-        it("passes the NIST SHAVS byte-oriented short messages test", function()
-            for i = 1, #shortMsg do
-                local msg = util.hexcat { shortMsg[i].msg }
-                local md = util.hexcat { shortMsg[i].md }
-                expect(sha256.digest(msg)):eq(md)
-                sleep()
-            end
-        end)
-    end
+    it("passes the NIST SHAVS byte-oriented short messages test", function()
+        for i = 1, #shortMsg do
+            local msg = util.hexcat { shortMsg[i].msg }
+            local md = util.hexcat { shortMsg[i].md }
+            expect(sha256.digest(msg)):eq(md)
+            sleep()
+        end
+    end)
 
-    if not hasLong then
-        pending("passes the NIST SHAVS byte-oriented long messages test")
-    else
-        it("passes the NIST SHAVS byte-oriented long messages test", function()
-            for i = 1, #longMsg do
-                local msg = util.hexcat { longMsg[i].msg }
-                local md = util.hexcat { longMsg[i].md }
-                expect(sha256.digest(msg)):eq(md)
-                sleep()
-            end
-        end)
-    end
+    it("passes the NIST SHAVS byte-oriented long messages test", function()
+        for i = 1, #longMsg do
+            local msg = util.hexcat { longMsg[i].msg }
+            local md = util.hexcat { longMsg[i].md }
+            expect(sha256.digest(msg)):eq(md)
+            sleep()
+        end
+    end)
 
     it("passes the NIST SHAVS monte carlo test (5k iterations)", function()
         local seed = util.hexcat {

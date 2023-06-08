@@ -203,13 +203,13 @@ local function sign(sk, pk, msg)
 end
 
 return {
-    maskX = maskX,
-    maskS = maskS,
-    remask = remask,
-    publicKeyX = publicKeyX,
-    ephemeralSk = ephemeralSk,
-    publicKeyS = publicKeyS,
-    exchangeX = exchangeX,
-    exchangeS = exchangeS,
-    sign = sign,
+    _EXPERIMENTAL_maskX = maskX,
+    _EXPERIMENTAL_maskS = maskS,
+    _EXPERIMENTAL_remask = remask,
+    _EXPERIMENTAL_publicKeyX = publicKeyX,
+    _EXPERIMENTAL_ephemeralSk = ephemeralSk,
+    _EXPERIMENTAL_publicKeyS = publicKeyS,
+    _EXPERIMENTAL_exchangeX = exchangeX,
+    _EXPERIMENTAL_exchangeS = exchangeS,
+    _EXPERIMENTAL_sign = sign,
 }

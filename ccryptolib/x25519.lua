@@ -42,5 +42,5 @@ end
 return {
     publicKey = publicKey,
     exchange = exchange,
-    exchangeEd = exchangeEd,
+    _EXPERIMENTAL_exchangeEd = exchangeEd,
 }

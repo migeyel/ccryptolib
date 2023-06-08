@@ -1,22 +1,11 @@
 --- High-performance binary packing of integers.
---
--- :::note Internal Module
--- This module is meant for internal use within the library. Its API is unstable
--- and subject to change without major version bumps.
--- :::
---
--- <br />
---
--- :::warning
--- For performance reasons, **the generated functions do not check types,
--- lengths, nor ranges**. You must ensure that the passed arguments are
--- well-formed and respect the format string yourself.
--- :::
---
--- <br />
---
--- @module[kind=internal] internal.packing
---
+---
+--- Remark (and warning):
+--- For performance reasons, **the generated functions do not check types,
+--- lengths, nor ranges**. You must ensure that the passed arguments are
+--- well-formed and respect the format string yourself.
+---
+--- <br />
 
 local fmt = string.format
 
@@ -119,14 +108,17 @@ if not string.pack or pcall(string.dump, string.pack) then
     local packCache = {}
     local unpackCache = {}
 
-    --- (`string.pack == nil`) Compiles a binary packing function.
-    -- @tparam string fmt A string matched by `^([><])I[I%d]+$`.
-    -- @treturn function A high-performance function that behaves like an unsafe
-    -- version of `string.pack` for the given format string. Note that the third
-    -- argument isn't optional.
-    -- @treturn string fmt
-    -- @throws If the string is invalid or has an invalid integral size.
-    -- @throws If the compiled function is too large.
+    -- I CAN'T EVEN WITH THIS EXTENSION, WHY CAN'T IT HANDLE MORE THAN A SINGLE
+    -- LINE OF RETURN DESCRIPTION? LOOK AT IT!!! THE COMMENT GOES OVER THERE ------------------------------------------------------------------> look! ↓ ↓ ↓
+
+    --- (string.pack is nil) Compiles a binary packing function.
+    ---
+    --- Errors if the format string is invalid or has an invalid integral size,
+    --- or if the compiled function turns out too large.
+    ---
+    --- @param fmt string A string matched by `^([><])I[I%d]+$`.
+    --- @return fun(_ignored: any, ...: any): string pack A function that behaves like an unsafe version of `string.pack` for the given format string.
+    --- @return string fmt
     function mod.compilePack(fmt)
         if not packCache[fmt] then
             packCache[fmt] = compile(fmt, mkPack)
@@ -134,13 +126,14 @@ if not string.pack or pcall(string.dump, string.pack) then
         return packCache[fmt], fmt
     end
 
-    --- (`string.pack == nil`) Compiles a binary unpacking function.
-    -- @tparam string fmt A string matched by `^([><])I[I%d]+$`.
-    -- @treturn function A high-performance function that behaves like an unsafe
-    -- version of `string.unpack` for the given format string.
-    -- @treturn string fmt
-    -- @throws If the string is invalid or has an invalid integral size.
-    -- @throws If the compiled function is too large.
+    --- (string.pack is nil) Compiles a binary unpacking function.
+    ---
+    --- Errors if the format string is invalid or has an invalid integral size,
+    --- or if the compiled function turns out too large.
+    ---
+    --- @param fmt string A string matched by `^([><])I[I%d]+$`.
+    --- @return fun(_ignored: any, str: string, pos: number) unpack A function that behaves like an unsafe version of `string.unpack` for the given format string. Note that the third argument isn't optional.
+    --- @return string fmt
     function mod.compileUnpack(fmt)
         if not unpackCache[fmt] then
             unpackCache[fmt] = compile(fmt, mkUnpack)
@@ -150,16 +143,16 @@ if not string.pack or pcall(string.dump, string.pack) then
 
     return mod
 else
-    --- (`string.pack ~= nil`) Compiles a binary packing function.
-    -- @tparam string fmt
-    -- @treturn function `string.pack`
-    -- @treturn string fmt
+    --- (string.pack isn't nil) It's string.pack! It returns string.pack!
+    --- @param fmt string
+    --- @return fun(fmt: string, ...: any): string pack string.pack!
+    --- @return string fmt
     mod.compilePack = function(fmt) return string.pack, fmt end
 
-    --- (`string.pack ~= nil`) Compiles a binary unpacking function.
-    -- @tparam string fmt
-    -- @treturn function `string.unpack`
-    -- @treturn string fmt
+    --- (string.pack isn't nil) It's string.unpack! It returns string.unpack!
+    --- @param fmt string
+    --- @return fun(fmt: string, str: string, pos: number) unpack string.unpack!
+    --- @return string fmt
     mod.compileUnpack = function(fmt) return string.unpack, fmt end
 end
 

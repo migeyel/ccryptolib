@@ -12,12 +12,19 @@
 
 local unpack = unpack or table.unpack
 
+--- A little-endian big integer of width 11 in (-2⁵²..2⁵²).
+--- @class MpSW11L52
+
+--- A little-endian big integer of width 11 in (-2²⁴, 2²⁴).
+--- @class MpSW11L24: MpSW11L52
+
+--- A little-endian big integer of width 11 in [0..2²⁴).
+--- @class MpUW11L24: MpSW11L24
+
 --- Carries a number in base 2²⁴ into a signed limb form.
---
--- @tparam {number...} a A number a in (-2²⁸⁸..2²⁸⁸) as 11 limbs in
--- [-2⁵²..2⁵²].
--- @treturn {number...} a as 12 limbs in (-2²⁴..2²⁴).
---
+--- @param a MpSW11L52
+--- @return MpSW11L24 low The carried low limbs.
+--- @return number carry The overflowed carry.
 local function carryWeak(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
 
@@ -45,16 +52,13 @@ local function carryWeak(a)
         a08 - h08,
         a09 - h09,
         a10 - h10,
-        h10 * 2 ^ -24,
-    }
+    }, h10 * 2 ^ -24
 end
 
 --- Carries a number in base 2²⁴.
---
--- @tparam {number...} a A number a in [0..2²⁸⁸) as 11 limbs in
--- [-2⁵²..2⁵²].
--- @treturn {number...} a as 12 limbs in [0..2²⁴).
---
+--- @param a MpSW11L52
+--- @return MpUW11L24 low The low 11 limbs of the output.
+--- @return number carry The overflow carry.
 local function carry(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
 
@@ -71,15 +75,13 @@ local function carry(a)
     local l10 = a10 % 2 ^ 24
     local h10 = (a10 - l10) * 2 ^ -24
 
-    return {l00, l01, l02, l03, l04, l05, l06, l07, l08, l09, l10, h10}
+    return {l00, l01, l02, l03, l04, l05, l06, l07, l08, l09, l10}, h10
 end
 
 --- Adds two numbers.
---
--- @tparam {number...} a An array of 11 limbs in (k..l).
--- @tparam {number...} b An array of 11 limbs in (m..n).
--- @treturn {number...} a + b as 11 limbs in ((k + m)..(l + n)).
---
+--- @param a MpSW11L24
+--- @param b MpSW11L24
+--- @return MpSW11L52 c a + b
 local function add(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
     local b00, b01, b02, b03, b04, b05, b06, b07, b08, b09, b10 = unpack(b)
@@ -100,11 +102,9 @@ local function add(a, b)
 end
 
 --- Subtracts a number from another.
---
--- @tparam {number...} a An array of 11 limbs in (k..l).
--- @tparam {number...} b An array of 11 limbs in (m..n).
--- @treturn {number...} a + b as 11 limbs in ((k - m)..(l - n)).
---
+--- @param a MpSW11L24
+--- @param b MpSW11L24
+--- @return MpSW11L52 c a - b
 local function sub(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
     local b00, b01, b02, b03, b04, b05, b06, b07, b08, b09, b10 = unpack(b)
@@ -125,17 +125,15 @@ local function sub(a, b)
 end
 
 --- Computes the lower half of a product between two numbers.
---
--- @tparam {number...} a A nonnegative integer as 11 limbs in [0..2²⁴).
--- @tparam {number...} b A nonnegative integer as 11 limbs in [0..2²⁴).
--- @treturn {number...} c ≡ a × b (mod 2²⁶⁴) as 11 limbs in [0..2²⁴).
--- @treturn number ⌊a × b ÷ 2²⁶⁴⌋.
---
+--- @param a MpUW11L24
+--- @param b MpUW11L24
+--- @return MpUW11L24 c a × b (mod 2²⁶⁴)
+--- @return number carry ⌊a × b ÷ 2²⁶⁴⌋
 local function lmul(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
     local b00, b01, b02, b03, b04, b05, b06, b07, b08, b09, b10 = unpack(b)
 
-    local out = carry {
+    return carry {
         a00 * b00,
         a01 * b00 + a00 * b01,
         a02 * b00 + a01 * b01 + a00 * b02,
@@ -148,28 +146,21 @@ local function lmul(a, b)
         a09 * b00 + a08 * b01 + a07 * b02 + a06 * b03 + a05 * b04 + a04 * b05 + a03 * b06 + a02 * b07 + a01 * b08 + a00 * b09,
         a10 * b00 + a09 * b01 + a08 * b02 + a07 * b03 + a06 * b04 + a05 * b05 + a04 * b06 + a03 * b07 + a02 * b08 + a01 * b09 + a00 * b10,
     }
-
-    -- Strip overflow.
-    local of = out[12]
-    out[12] = nil
-
-    return out, of
 end
 
 --- Computes the a product between two numbers.
---
--- @tparam {number...} a An array of 11 limbs in [0..2²⁴).
--- @tparam {number...} b An array of 11 limbs in [0..2²⁴).
--- @treturn {number...} The first 11 limbs of a × b in [0..2²⁴).
--- @treturn {number...} The last 11 limbs of a × b in [0..2²⁴).
---
+--- @param a MpUW11L24
+--- @param b MpUW11L24
+--- @return MpUW11L24 low The low 11 limbs of a × b.
+--- @return MpUW11L24 high The high 11 limbs of a × b.
 local function mul(a, b)
     local low, of = lmul(a, b)
 
     local _, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
     local _, b01, b02, b03, b04, b05, b06, b07, b08, b09, b10 = unpack(b)
 
-    local high = carry {
+    -- The carry is always 0.
+    return low, (carry {
         of + a10 * b01 + a09 * b02 + a08 * b03 + a07 * b04 + a06 * b05 + a05 * b06 + a04 * b07 + a03 * b08 + a02 * b09 + a01 * b10,
         a10 * b02 + a09 * b03 + a08 * b04 + a07 * b05 + a06 * b06 + a05 * b07 + a04 * b08 + a03 * b09 + a02 * b10,
         a10 * b03 + a09 * b04 + a08 * b05 + a07 * b06 + a06 * b07 + a05 * b08 + a04 * b09 + a03 * b10,
@@ -181,40 +172,31 @@ local function mul(a, b)
         a10 * b09 + a09 * b10,
         a10 * b10,
         0
-    }
-
-    -- Strip overflow (it's always 0).
-    high[12] = nil
-
-    return low, high
+    })
 end
 
 --- Computes a double-width sum of two numbers.
---
--- @tparam {number...} a0 The low part of a as 11 limbs in [0..2²⁴).
--- @tparam {number...} a1 The high part of a as 11 limbs in [0..2²⁴).
--- @tparam {number...} b0 The low part of b as 11 limbs in [0..2²⁴).
--- @tparam {number...} b1 The high part of b as 11 limbs in [0..2²⁴).
--- @treturn {number...} The low part of a + b as 11 limbs in [0..2²⁴).
--- @treturn {number...} The high part of a + b as 12 limbs in [0..2²⁴).
---
+--- @param a0 MpUW11L24 The low 11 limbs of a.
+--- @param a1 MpUW11L24 The high 11 limbs of a.
+--- @param b0 MpUW11L24 The low 11 limbs of b.
+--- @param b1 MpUW11L24 The high 11 limbs of b.
+--- @return MpUW11L24 c0 The low 11 limbs of a + b.
+--- @return MpUW11L24 c1 The high 11 limbs of a + b.
+--- @return number The carry.
 local function dwadd(a0, a1, b0, b1)
-    local low = carry(add(a0, b0))
+    local low, c = carry(add(a0, b0))
     local high = add(a1, b1)
-    high[1] = high[1] + low[12]
-    low[12] = nil
+    high[1] = high[1] + c
     return low, carry(high)
 end
 
 --- Computes half of a number.
---
--- @tparam {number...} a An even positive integer as 11 limbs in (-2²⁴..2²⁴).
--- @treturn {number...} a ÷ 2 as 11 limbs in (-2²⁴..2²⁴).
---
+--- @param a MpSW11L24 The number to halve, must be even.
+--- @return MpSW11L24 c a ÷ 2
 local function half(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
 
-    local out = carryWeak {
+    return (carryWeak {
         a00 * 0.5 + a01 * 2 ^ 23,
         a02 * 2 ^ 23,
         a03 * 2 ^ 23,
@@ -226,18 +208,12 @@ local function half(a)
         a09 * 2 ^ 23,
         a10 * 2 ^ 23,
         0,
-    }
-
-    out[12] = nil
-
-    return out
+    })
 end
 
 --- Computes a third of a number.
---
--- @tparam {number...} a A positive multiple of 3 as 11 limbs in (-2²⁶..2²⁶).
--- @treturn {number...} a ÷ 3 as 11 limbs in (-2²⁴..2²⁴).
---
+--- @param a MpSW11L24 The number to divide, must be a multiple of 3.
+--- @return MpSW11L24 c a ÷ 3
 local function third(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
 
@@ -253,7 +229,9 @@ local function third(a)
     local d09 = a09 * 0xaaaaaa + d08
     local d10 = a10 * 0xaaaaaa + d09
 
-    local out = carryWeak {
+    -- We compute the modular division mod 2²⁶⁴. The carry isn't 0 but it isn't
+    -- part of a ÷ 3 either.
+    return (carryWeak {
         a00 + d00,
         a01 + d01,
         a02 + d02,
@@ -265,39 +243,27 @@ local function third(a)
         a08 + d08,
         a09 + d09,
         a10 + d10,
-    }
-
-    -- We compute the modular division mod 2²⁶⁴. out[12] isn't 0 but it's not
-    -- part of a ÷ 3 either.
-    out[12] = nil
-
-    return out
+    })
 end
 
 --- Computes a number modulo 2.
---
--- @tparam {number...} a A number as 11 limbs in (-2²⁶, 2²⁶).
--- @treturn number a mod 2.
---
+--- @param a MpSW11L24
+--- @return number c a mod 2.
 local function mod2(a)
     return a[1] % 2
 end
 
 --- Computes a number modulo 3.
---
--- @tparam {number...} a A number as 11 limbs in (-2²⁶, 2²⁶).
--- @treturn number a mod 3.
---
+--- @param a MpSW11L24
+--- @return number c a mod 3.
 local function mod3(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
     return (a00 + a01 + a02 + a03 + a04 + a05 + a06 + a07 + a08 + a09 + a10) % 3
 end
 
 --- Computes a double representing the most-significant bits of a number.
---
--- @tparam {number...} a A number as 11 limbs in (-2⁴⁸..2⁴⁸).
--- @treturn number A floating-point approximation for the value of a.
---
+--- @param a MpSW11L52
+--- @return number c A floating-point approximation for the value of a.
 local function approx(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
     return a00
@@ -314,11 +280,9 @@ local function approx(a)
 end
 
 --- Compares two numbers for ordering.
---
--- @tparam {number...} a A number as 11 limbs in (-2²⁵..2²⁵).
--- @tparam {number...} b A number as 11 limbs in (-2²⁵..2²⁵).
--- @treturn number Some number x with x < 0 iff a < b and x = 0 iff a = b.
---
+--- @param a MpSW11L24
+--- @param b MpSW11L24
+--- @return number ord Some number with ord < 0 iff a < b and ord = 0 iff a = b.
 local function cmp(a, b)
     return approx(sub(a, b))
 end

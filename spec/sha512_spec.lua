@@ -9,10 +9,10 @@ local sha512 = require "ccryptolib.internal.sha512"
 local shortMsg = require "spec.vec.sha512.short"
 local longMsg = require "spec.vec.sha512.long"
 
-describe("sha256.digest", function()
+describe("sha512.digest", function()
     it("validates arguments", function()
         expect.error(sha512.digest, nil)
-            :eq("bad argument #1 (expected string, got nil)")
+            :eq("bad argument #1 (string expected, got nil)")
     end)
 
     it("passes the NIST SHAVS byte-oriented short messages test", function()

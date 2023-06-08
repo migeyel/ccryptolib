@@ -16,15 +16,15 @@ describe("chacha20.crypt", function()
 
         -- Types
         expect.error(chacha20.crypt, nil, nonce, msg, rounds, offset)
-            :eq("bad argument #1 (expected string, got nil)")
+            :eq("bad argument #1 (string expected, got nil)")
         expect.error(chacha20.crypt, key, nil, msg, rounds, offset)
-            :eq("bad argument #2 (expected string, got nil)")
+            :eq("bad argument #2 (string expected, got nil)")
         expect.error(chacha20.crypt, key, nonce, nil, rounds, offset)
-            :eq("bad argument #3 (expected string, got nil)")
+            :eq("bad argument #3 (string expected, got nil)")
         expect.error(chacha20.crypt, key, nonce, msg, {}, offset)
-            :eq("bad argument #4 (expected number, got table)")
+            :eq("bad argument #4 (number expected, got table)")
         expect.error(chacha20.crypt, key, nonce, msg, nil, {})
-            :eq("bad argument #5 (expected number, got table)")
+            :eq("bad argument #5 (number expected, got table)")
 
         -- String lengths
         expect.error(chacha20.crypt, key .. "a", nonce, msg, rounds, offset)

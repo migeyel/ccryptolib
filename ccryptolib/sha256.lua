@@ -1,7 +1,4 @@
 --- The SHA256 cryptographic hash function.
---
--- @module sha256
---
 
 local expect  = require "cc.expect".expect
 local lassert = require "ccryptolib.internal.util".lassert
@@ -79,10 +76,8 @@ local function compress(h, w)
 end
 
 --- Hashes data using SHA256.
---
--- @tparam string data Input bytes.
--- @treturn string The 32-byte hash value.
---
+--- @param data string Input bytes.
+--- @return string hash The 32-byte hash value.
 local function digest(data)
     expect(1, data, "string")
 
@@ -101,12 +96,10 @@ local function digest(data)
 end
 
 --- Hashes a password using PBKDF2-HMAC-SHA256.
---
--- @tparam password string The password to hash.
--- @tparam salt string The password's salt.
--- @tparam iter number The number of iterations to perform.
--- @treturn string The 32-byte derived key.
---
+--- @param password string The password to hash.
+--- @param salt string The password's salt.
+--- @param iter number The number of iterations to perform.
+--- @return string dk The 32-byte derived key.
 local function pbkdf2(password, salt, iter)
     expect(1, password, "string")
     expect(2, salt, "string")

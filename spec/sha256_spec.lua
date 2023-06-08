@@ -12,7 +12,7 @@ local longMsg = require "spec.vec.sha256.long"
 describe("sha256.digest", function()
     it("validates arguments", function()
         expect.error(sha256.digest, nil)
-            :eq("bad argument #1 (expected string, got nil)")
+            :eq("bad argument #1 (string expected, got nil)")
     end)
 
     it("passes the NIST SHAVS byte-oriented short messages test", function()

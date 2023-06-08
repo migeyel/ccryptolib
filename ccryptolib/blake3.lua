@@ -1,7 +1,4 @@
 --- The BLAKE3 cryptographic hash function.
---
--- @module blake3
---
 
 local expect = require "cc.expect".expect
 local lassert = require "ccryptolib.internal.util".lassert
@@ -208,11 +205,9 @@ end
 local mod = {}
 
 --- Hashes data using BLAKE3.
---
--- @tparam string message The input message.
--- @tparam[opt=32] number len The desired hash length, in bytes.
--- @treturn string The hash.
---
+--- @param message string The input message.
+--- @param len number? The desired hash length, in bytes. Defaults to 32.
+--- @return string hash The hash.
 function mod.digest(message, len)
     expect(1, message, "string")
     len = expect(2, len, "number", "nil") or 32
@@ -222,12 +217,10 @@ function mod.digest(message, len)
 end
 
 --- Performs a keyed hash.
---
--- @tparam string key A 32-byte random key.
--- @tparam string message The input message.
--- @tparam[opt=32] number len The desired hash length, in bytes.
--- @treturn string The keyed hash.
---
+--- @param key string A 32-byte random key.
+--- @param message string The input message.
+--- @param len number? The desired hash length, in bytes. Defaults to 32.
+--- @return string hash The keyed hash.
 function mod.digestKeyed(key, message, len)
     expect(1, key, "string")
     lassert(#key == 32, "key length must be 32", 2)
@@ -239,14 +232,15 @@ function mod.digestKeyed(key, message, len)
 end
 
 --- Makes a context-based key derivation function (KDF).
---
--- @tparam string context The context for the KDF.
--- @treturn function(material:string [, len:number]):string The KDF.
---
+--- @param context string The context for the KDF.
+--- @return fun(material: string, len: number?): string kdf The KDF.
 function mod.deriveKey(context)
     expect(1, context, "string")
     local iv = {u8x4(fmt8x4, blake3(IV, DERIVE_KEY_CONTEXT, context, 32), 1)}
 
+    --- Derives a key.
+    --- @param material string The keying material.
+    --- @param len number? The desired hash length, in bytes. Defaults to 32.
     return function(material, len)
         expect(1, material, "string")
         len = expect(2, len, "number", "nil") or 32

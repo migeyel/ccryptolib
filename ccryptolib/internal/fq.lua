@@ -10,8 +10,8 @@
 -- @module[kind=internal] internal.fq
 --
 
-local mp      = require "ccryptolib.internal.mp"
-local util    = require "ccryptolib.internal.util"
+local mp = require "ccryptolib.internal.mp"
+local util = require "ccryptolib.internal.util"
 local packing = require "ccryptolib.internal.packing"
 
 local unpack = unpack or table.unpack
@@ -90,14 +90,12 @@ local function reduce(a)
     local c = mp.sub(a, Q)
 
     -- Return carry(a) if a < q.
-    if mp.approx(c) < 0 then return mp.carry(a) end
+    if mp.approx(c) < 0 then return (mp.carry(a)) end
 
     -- c >= q means c - q >= 0.
     -- Since q < 2²⁸⁸, c < 2q means c - q < q < 2²⁸⁸.
     -- c's limbs fit in (-2²⁶..2²⁶), since subtraction adds at most one bit.
-    local cc = mp.carry(c)
-    cc[12] = nil -- cc < q implies that cc[12] = 0.
-    return cc
+    return (mp.carry(c)) -- cc < q implies that the carry number is 0.
 end
 
 --- Adds two scalars mod q.
@@ -168,15 +166,6 @@ local function demontgomery(a)
     local mq0, mq1 = mp.mul(mp.lmul(a, T0), Q)
     local _, s1 = mp.dwadd(a, ZERO, mq0, mq1)
     return reduce(s1)
-end
-
---- Converts a Lua number to a scalar.
---
--- @tparam number n A number n in [0..2²⁴).
--- @treturn {number...} 2²⁶⁴ × n mod q as 11 limbs in [0..2²⁴).
---
-local function num(n)
-    return montgomery({n, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 end
 
 --- Encodes a scalar.
@@ -378,12 +367,8 @@ local function makeRuleset(a, b)
 end
 
 return {
-    num = num,
     add = add,
-    neg = neg,
     sub = sub,
-    montgomery = montgomery,
-    demontgomery = demontgomery,
     mul = mul,
     encode = encode,
     decode = decode,

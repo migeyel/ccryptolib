@@ -8,6 +8,8 @@ local sha512 = require "ccryptolib.internal.sha512"
 local random = require "ccryptolib.random"
 
 --- Masks an exchange secret key.
+--- @param sk string A random 32-byte Curve25519 secret key.
+--- @return string msk A masked secret key.
 local function maskX(sk)
     expect(1, sk, "string")
     lassert(#sk == 32, "secret key length must be 32", 2)
@@ -19,6 +21,8 @@ local function maskX(sk)
 end
 
 --- Masks a signature secret key.
+--- @param sk string A random 32-byte Edwards25519 secret key.
+--- @return string msk A masked secret key.
 function maskS(sk)
     expect(1, sk, "string")
     lassert(#sk == 32, "secret key length must be 32", 2)
@@ -26,27 +30,29 @@ function maskS(sk)
 end
 
 --- Rerandomizes the masking on a masked key.
-local function remask(sk)
-    expect(1, sk, "string")
-    lassert(#sk == 64, "masked secret key length must be 64", 2)
+--- @param msk string A masked secret key.
+--- @return string msk The same secret key, but with another mask.
+local function remask(msk)
+    expect(1, msk, "string")
+    lassert(#msk == 64, "masked secret key length must be 64", 2)
     local newMask = random.random(32)
-    local xr = fq.decode(sk:sub(1, 32))
-    local r = fq.decodeClamped(sk:sub(33))
+    local xr = fq.decode(msk:sub(1, 32))
+    local r = fq.decodeClamped(msk:sub(33))
     local s = fq.decodeClamped(newMask)
     local xs = fq.add(xr, fq.sub(r, s))
     return fq.encode(xs) .. newMask
 end
 
 --- Returns the ephemeral exchange secret key of this masked key.
---
--- This is the second secret key in the "double key exchange" in @{exchange},
--- the first being the key that has been masked. The ephemeral key changes every
--- time @{remask} is called.
---
-local function ephemeralSk(sk)
-    expect(1, sk, "string")
-    lassert(#sk == 64, "masked secret key length must be 64", 2)
-    return sk:sub(33)
+--- This is the second secret key in the "double key exchange" in @{exchange},
+--- the first being the key that has been masked. The ephemeral key changes
+--- every time @{remask} is called.
+--- @param msk string A masked secret key.
+--- @return string esk The ephemeral half of the masked secret key.
+local function ephemeralSk(msk)
+    expect(1, msk, "string")
+    lassert(#msk == 64, "masked secret key length must be 64", 2)
+    return msk:sub(33)
 end
 
 local function exchangeOnPoint(sk, P)
@@ -108,54 +114,69 @@ local function exchangeOnPoint(sk, P)
 end
 
 --- Returns the X25519 public key of this masked key.
-local function publicKeyX(sk)
-    expect(1, sk, "string")
-    lassert(#sk == 64, "masked secret key length must be 64", 2)
-    return (exchangeOnPoint(sk, c25.G))
+--- @param msk string A masked secret key.
+local function publicKeyX(msk)
+    expect(1, msk, "string")
+    lassert(#msk == 64, "masked secret key length must be 64", 2)
+    return (exchangeOnPoint(msk, c25.G))
 end
 
 --- Returns the Ed25519 public key of this masked key.
-local function publicKeyS(sk)
-    expect(1, sk, "string")
-    lassert(#sk == 64, "masked secret key length must be 64", 2)
-    local xr = fq.decode(sk:sub(1, 32))
-    local r = fq.decodeClamped(sk:sub(33))
+--- @param msk string A masked secret key.
+--- @return string pk The Ed25519 public key matching this masked key.
+local function publicKeyS(msk)
+    expect(1, msk, "string")
+    lassert(#msk == 64, "masked secret key length must be 64", 2)
+    local xr = fq.decode(msk:sub(1, 32))
+    local r = fq.decodeClamped(msk:sub(33))
     local y = ed.add(ed.mulG(fq.bits(xr)), ed.niels(ed.mulG(fq.bits(r))))
     return ed.encode(ed.scale(y))
 end
 
 --- Performs a double key exchange.
---
--- Returns 0 if the input public key has small order or if it isn't in the base
--- curve. This is different from standard X25519, which performs the exchange
--- even on the twist.
---
--- May incorrectly return 0 with negligible chance if the mask happens to match
--- the masked key. I haven't checked if clamping prevents that from happening.
---
+---
+--- Returns 0 if the input public key has small order or if it isn't in the base
+--- curve. This is different from standard X25519, which performs the exchange
+--- even on the twist.
+---
+--- May incorrectly return 0 with negligible chance if the mask happens to match
+--- the masked key. I haven't checked if clamping prevents that from happening.
+---
+--- @param sk string A masked secret key.
+--- @param pk string An X25519 public key.
+--- @return string sss The shared secret between the public key and the static half of the masked key.
+--- @return string sse The shared secret betwen the public key and the ephemeral half of the masked key.
 local function exchangeX(sk, pk)
     expect(1, sk, "string")
     lassert(#sk == 64, "masked secret key length must be 64", 2)
     expect(2, pk, "string")
-    lassert(#pk == 32, "public key length must be 32", 2)
+    lassert(#pk == 32, "public key length must be 32", 2) --- @cast pk String32
     return exchangeOnPoint(sk, c25.decode(pk))
 end
 
 --- Performs an exchange against an Ed25519 key.
---
--- This is done by converting the key into X25519 before passing it to the
--- regular exchange. Using this function on the result of @{signaturePk} leads
--- to the same value as using @{exchange} on the result of @{exchangePk}.
---
+---
+--- This is done by converting the key into X25519 before passing it to the
+--- regular exchange. Using this function on the result of @{signaturePk} leads
+--- to the same value as using @{exchange} on the result of @{exchangePk}.
+---
+--- @param sk string A masked secret key.
+--- @param pk string An Ed25519 public key.
+--- @return string sss The shared secret between the public key and the static half of the masked key.
+--- @return string sse The shared secret betwen the public key and the ephemeral half of the masked key.
 local function exchangeS(sk, pk)
     expect(1, sk, "string")
     lassert(#sk == 64, "masked secret key length must be 64", 2)
     expect(2, pk, "string")
-    lassert(#pk == 32, "public key length must be 32", 2)
+    lassert(#pk == 32, "public key length must be 32", 2) --- @cast pk String32
     return exchangeOnPoint(sk, c25.decodeEd(pk))
 end
 
 --- Signs a message using Ed25519.
+--- @param sk string A masked secret key.
+--- @param pk string The Ed25519 public key matching the secret key.
+--- @param msg string A message to sign.
+--- @return string sig The signature on the message.
 local function sign(sk, pk, msg)
     expect(1, sk, "string")
     lassert(#sk == 64, "masked secret key length must be 64", 2)

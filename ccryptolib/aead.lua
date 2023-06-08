@@ -1,7 +1,4 @@
 --- The ChaCha20Poly1305AEAD authenticated encryption with associated data (AEAD) construction.
---
--- @module aead
---
 
 local expect   = require "cc.expect".expect
 local lassert = require "ccryptolib.internal.util".lassert
@@ -14,15 +11,13 @@ local u4x4, fmt4x4 = packing.compileUnpack("<I4I4I4I4")
 local bxor = bit32.bxor
 
 --- Encrypts a message.
---
--- @tparam string key A 32-byte random key.
--- @tparam string nonce A 12-byte per-message unique nonce.
--- @tparam string message The message to be encrypted.
--- @tparam string aad Arbitrary associated data to authenticate on decryption.
--- @tparam[opt=20] number rounds The number of ChaCha20 rounds to use.
--- @treturn string The ciphertext.
--- @treturn string The 16-byte authentication tag.
---
+--- @param key string A 32-byte random key.
+--- @param nonce string A 12-byte per-message unique nonce.
+--- @param message string The message to be encrypted.
+--- @param aad string aad Arbitrary associated data to also authenticate.
+--- @param rounds number? The number of ChaCha20 rounds to use. Defaults to 20.
+--- @return string ctx The ciphertext.
+--- @return string tag The 16-byte authentication tag.
 local function encrypt(key, nonce, message, aad, rounds)
     expect(1, key, "string")
     lassert(#key == 32, "key length must be 32", 2)
@@ -53,16 +48,13 @@ local function encrypt(key, nonce, message, aad, rounds)
 end
 
 --- Decrypts a message.
---
--- @tparam string key The key used on encryption.
--- @tparam string nonce The nonce used on encryption.
--- @tparam string ciphertext The ciphertext to be decrypted.
--- @tparam string aad The arbitrary associated data used on encryption.
--- @tparam string tag The authentication tag returned on encryption.
--- @tparam[opt=20] number rounds The number of rounds used on encryption.
--- @treturn[1] string The decrypted plaintext.
--- @treturn[2] nil If authentication has failed.
---
+--- @param key string The key used on encryption.
+--- @param nonce string The nonce used on encryption.
+--- @param ciphertext string The ciphertext to be decrypted.
+--- @param aad string The arbitrary associated data used on encryption.
+--- @param tag string The authentication tag returned on encryption.
+--- @param rounds number The number of rounds used on encryption.
+--- @return string? msg The decrypted plaintext. Or nil on auth failure.
 local function decrypt(key, nonce, tag, ciphertext, aad, rounds)
     expect(1, key, "string")
     lassert(#key == 32, "key length must be 32", 2)

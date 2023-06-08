@@ -4,12 +4,10 @@ local function lassert(val, err, level)
 end
 
 --- Converts a little-endian array from one power-of-two base to another.
---
--- @tparam {number...} a The array to convert, in little-endian.
--- @tparam number base1 The base to convert from. Must be a power of 2.
--- @tparam number base2 The base to convert to. Must be a power of 2.
--- @treturn {number...}
---
+--- @param a number[] The array to convert, in little-endian.
+--- @param base1 number The base to convert from. Must be a power of 2.
+--- @param base2 number The base to convert to. Must be a power of 2.
+--- @return number[]
 local function rebaseLE(a, base1, base2) -- TODO Write contract properly.
     local out = {}
     local outlen = 1
@@ -33,10 +31,8 @@ local function rebaseLE(a, base1, base2) -- TODO Write contract properly.
 end
 
 --- Decodes bits with X25519/Ed25519 exponent clamping.
---
--- @taparm string str The 32-byte encoded exponent.
--- @treturn {number...} The decoded clamped bits.
---
+--- @param str string The 32-byte encoded exponent.
+--- @return number[] bits The decoded clamped bits.
 local function bits(str)
     -- Decode.
     local bytes = {str:byte(1, 32)}
@@ -61,10 +57,8 @@ local function bits(str)
 end
 
 --- Decodes bits with X25519/Ed25519 exponent clamping and division by 8.
---
--- @taparm string str The 32-byte encoded exponent.
--- @treturn {number...} The decoded clamped bits, divided by 8.
---
+--- @param str string The 32-byte encoded exponent.
+--- @return number[] bits The decoded clamped bits, divided by 8.
 local function bits8(str)
     return {unpack(bits(str), 4)}
 end

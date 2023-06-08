@@ -17,9 +17,9 @@ describe("blake3.digest", function()
     it("validates arguments", function()
         -- Types
         expect.error(blake3.digest, nil)
-            :eq("bad argument #1 (expected string, got nil)")
+            :eq("bad argument #1 (string expected, got nil)")
         expect.error(blake3.digest, "", {})
-            :eq("bad argument #2 (expected number, got table)")
+            :eq("bad argument #2 (number expected, got table)")
 
         -- Length
         expect.error(blake3.digest, "", 0.5)
@@ -51,11 +51,11 @@ describe("blake3.digestKeyed", function()
 
         -- Types
         expect.error(blake3.digestKeyed, nil, "")
-            :eq("bad argument #1 (expected string, got nil)")
+            :eq("bad argument #1 (string expected, got nil)")
         expect.error(blake3.digestKeyed, key, nil)
-            :eq("bad argument #2 (expected string, got nil)")
+            :eq("bad argument #2 (string expected, got nil)")
         expect.error(blake3.digestKeyed, key, "", {})
-            :eq("bad argument #3 (expected number, got table)")
+            :eq("bad argument #3 (number expected, got table)")
 
         -- String lengths
         expect.error(blake3.digestKeyed, key .. "a", "")
@@ -90,11 +90,11 @@ describe("blake3.deriveKey", function()
     it("validates arguments", function()
         -- Types
         expect.error(blake3.deriveKey, nil)
-            :eq("bad argument #1 (expected string, got nil)")
+            :eq("bad argument #1 (string expected, got nil)")
         expect.error(blake3.deriveKey(""), nil)
-            :eq("bad argument #1 (expected string, got nil)")
+            :eq("bad argument #1 (string expected, got nil)")
         expect.error(blake3.deriveKey(""), "", {})
-            :eq("bad argument #2 (expected number, got table)")
+            :eq("bad argument #2 (number expected, got table)")
 
         -- Length
         expect.error(blake3.deriveKey(""), "", 0.5)

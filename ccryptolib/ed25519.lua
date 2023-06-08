@@ -1,7 +1,4 @@
 --- The Ed25519 digital signature scheme.
---
--- @module ed25519
---
 
 local expect = require "cc.expect".expect
 local lassert = require "ccryptolib.internal.util".lassert
@@ -13,10 +10,8 @@ local random = require "ccryptolib.random"
 local mod = {}
 
 --- Computes a public key from a secret key.
---
--- @tparam string sk A random 32-byte secret key.
--- @treturn string The matching 32-byte public key.
---
+--- @param sk string A random 32-byte secret key.
+--- @return string pk The matching 32-byte public key.
 function mod.publicKey(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
@@ -28,12 +23,10 @@ function mod.publicKey(sk)
 end
 
 --- Signs a message.
---
--- @tparam string sk The signer's secret key.
--- @tparam string pk The signer's public key.
--- @tparam string msg The message to be signed.
--- @treturn string The 64-byte signature on the message.
---
+--- @param sk string The signer's secret key.
+--- @param pk string The signer's public key.
+--- @param msg string The message to be signed.
+--- @return string sig The 64-byte signature on the message.
 function mod.sign(sk, pk, msg)
     expect(1, sk, "string")
     lassert(#sk == 32, "secret key length must be 32", 2)
@@ -62,21 +55,19 @@ function mod.sign(sk, pk, msg)
 end
 
 --- Verifies a signature on a message.
---
--- @tparam string pk The signer's public key.
--- @tparam string msg The signed message.
--- @tparam string sig The signature.
--- @treturn boolean Whether the signature is valid or not.
---
+--- @param pk string The signer's public key.
+--- @param msg string The signed message.
+--- @param sig string The alleged signature.
+--- @return boolean valid Whether the signature is valid or not.
 function mod.verify(pk, msg, sig)
     expect(1, pk, "string")
-    lassert(#pk == 32, "public key length must be 32", 2)
+    lassert(#pk == 32, "public key length must be 32", 2) --- @cast pk String32
     expect(2, msg, "string")
     expect(3, sig, "string")
     lassert(#sig == 64, "signature length must be 64", 2)
 
     local y = ed.decode(pk)
-    if not y then return nil end
+    if not y then return false end
 
     local rStr = sig:sub(1, 32)
     local sStr = sig:sub(33)

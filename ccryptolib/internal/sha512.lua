@@ -1,14 +1,4 @@
 --- The SHA512 cryptographic hash function.
---
--- :::note Internal Module
--- This module is meant for internal use within the library. Its API is unstable
--- and subject to change without major version bumps.
--- :::
---
--- <br />
---
--- @module[kind=internal] internal.sha512
---
 
 local expect  = require "cc.expect".expect
 local packing = require "ccryptolib.internal.packing"
@@ -59,10 +49,8 @@ local K = {
 }
 
 --- Hashes data bytes using SHA512.
---
--- @tparam string data The input data.
--- @treturn string The 64-byte hash value.
---
+--- @param data string The input data.
+--- @return string hash The 64-byte hash value.
 local function digest(data)
     expect(1, data, "string")
 

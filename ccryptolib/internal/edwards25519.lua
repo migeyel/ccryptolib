@@ -1,30 +1,31 @@
 --- Point arithmetic on the Edwards25519 Edwards curve.
---
--- :::note Internal Module
--- This module is meant for internal use within the library. Its API is unstable
--- and subject to change without major version bumps.
--- :::
---
--- <br />
---
--- @module[kind=internal] internal.edwards25519
---
 
 local fp = require "ccryptolib.internal.fp"
 
 local unpack = unpack or table.unpack
 
+--- @class EdPoint A point on Edwards25519, in extended coordinates.
+--- @field [1] number[] The X coordinate.
+--- @field [2] number[] The Y coordinate.
+--- @field [3] number[] The Z coordinate.
+--- @field [4] number[] The T coordinate.
+
+--- @class NsPoint A point on Edwards25519, in Niels' coordinates.
+--- @field [1] number[] Preprocessed Y + X.
+--- @field [2] number[] Preprocessed Y - X.
+--- @field [3] number[] Preprocessed 2Z.
+--- @field [4] number[] Preprocessed 2DT.
+
 local D = fp.mul(fp.num(-121665), fp.invert(fp.num(121666)))
 local K = fp.kmul(D, 2)
 
+--- @type EdPoint
 local O = {fp.num(0), fp.num(1), fp.num(1), fp.num(0)}
 local G = nil
 
 --- Doubles a point.
---
--- @tparam point P1 The point to double.
--- @treturn point Twice P1.
---
+--- @param P1 EdPoint The point to double.
+--- @return EdPoint P2 P1 + P1.
 local function double(P1)
     -- Unsoundness: fp.sub(g, e), and fp.sub(d, i) break fp.sub's contract since
     -- it doesn't accept an fp2. Although not ideal, in practice this doesn't
@@ -48,14 +49,12 @@ local function double(P1)
 end
 
 --- Adds two points.
---
--- @tparam point P1 The first summand point.
--- @tparam niels N1 The second summand point, in Niels form. See @{niels}.
--- @treturn point The sum.
---
-local function add(P1, N1)
+--- @param P1 EdPoint The first summand point.
+--- @param N2 NsPoint The second summand point.
+--- @return EdPoint P3 P1 + P2, where N2 = niels(P2).
+local function add(P1, N2)
     local P1x, P1y, P1z, P1t = unpack(P1)
-    local N1p, N1m, N1z, N1t = unpack(N1)
+    local N1p, N1m, N1z, N1t = unpack(N2)
     local a = fp.sub(P1y, P1x)
     local b = fp.mul(a, N1m)
     local c = fp.add(P1y, P1x)
@@ -73,9 +72,13 @@ local function add(P1, N1)
     return {P3x, P3y, P3z, P3t}
 end
 
-local function sub(P1, N1)
+--- Subtracts one point from another.
+--- @param P1 EdPoint The first summand point.
+--- @param N2 NsPoint The second summand point.
+--- @return EdPoint P3 P1 - P2, where N2 = niels(P2).
+local function sub(P1, N2)
     local P1x, P1y, P1z, P1t = unpack(P1)
-    local N1p, N1m, N1z, N1t = unpack(N1)
+    local N1p, N1m, N1z, N1t = unpack(N2)
     local a = fp.sub(P1y, P1x)
     local b = fp.mul(a, N1p)
     local c = fp.add(P1y, P1x)
@@ -94,10 +97,8 @@ local function sub(P1, N1)
 end
 
 --- Computes the Niels representation of a point.
---
--- @tparam point P1
--- @treturn niels P1's Niels representation.
---
+--- @param P1 EdPoint The input point.
+--- @return NsPoint N1 Niels' precomputation applied to P1.
 local function niels(P1)
     local P1x, P1y, P1z, P1t = unpack(P1)
     local N3p = fp.add(P1y, P1x)
@@ -107,6 +108,9 @@ local function niels(P1)
     return {N3p, N3m, N3z, N3t}
 end
 
+--- Scales a point.
+--- @param P1 EdPoint The input point.
+--- @return EdPoint P2 The same point as P1, but with Z = 1.
 local function scale(P1)
     local P1x, P1y, P1z = unpack(P1)
     local zInv = fp.invert(P1z)
@@ -117,11 +121,9 @@ local function scale(P1)
     return {P3x, P3y, P3z, P3t}
 end
 
---- Encodes a point.
---
--- @tparam point P1 The scaled point to encode.
--- @treturn string The 32-byte encoded point.
---
+--- Encodes a scaled point.
+--- @param P1 EdPoint The scaled point to encode.
+--- @return string out P1 encoded as a 32-byte string.
 local function encode(P1)
     P1 = scale(P1)
     local P1x, P1y = unpack(P1)
@@ -131,11 +133,8 @@ local function encode(P1)
 end
 
 --- Decodes a point.
---
--- @tparam string str A 32-byte encoded point.
--- @treturn[1] point The decoded point.
--- @treturn[2] nil If the string did not represent a valid encoded point.
---
+--- @param str String32 A 32-byte encoded point.
+--- @return EdPoint? P1 The decoded point, or nil if it isn't on the curve.
 local function decode(str)
     local P3y = fp.decode(str)
     local a = fp.square(P3y)
@@ -153,8 +152,12 @@ local function decode(str)
     return {P3x, P3y, P3z, P3t}
 end
 
-G = decode("Xfffffffffffffffffffffffffffffff")
+G = decode("Xfffffffffffffffffffffffffffffff") --[[@as EdPoint, G is valid]]
 
+--- Transforms little-endian bits into a signed radix-2^w form.
+--- @param bits number[]
+--- @param w number Log2 of the radix, must be at least 1.
+--- @return number[]
 local function signedRadixW(bits, w)
     -- TODO Find a more elegant way of doing this.
     local wPow = 2 ^ w
@@ -176,6 +179,10 @@ local function signedRadixW(bits, w)
     return out
 end
 
+--- Computes a multiplication table for radix-2^w form multiplication.
+--- @param P EdPoint The base point.
+--- @param w number Log2 of the radix, must be at least 1.
+--- @return NsPoint[][]
 local function radixWTable(P, w)
     local out = {}
     for i = 1, math.ceil(256 / w) do
@@ -190,10 +197,21 @@ local function radixWTable(P, w)
     return out
 end
 
+--- The radix logarithm of the precomputed table for G.
 local G_W = 5
+
+--- The precomputed multiplication table for G.
 local G_TABLE = radixWTable(G, G_W)
 
-local function WNAF(bits, w)
+--- Transforms little-endian bits into a signed radix-2^w non-adjacent form.
+---
+--- The returned array contains a 0 whenever a single doubling is needed, or an
+--- odd integer when an addition with a multiple of the base is needed.
+---
+--- @param bits number[]
+--- @param w number Log2 of the radix, must be at least 1.
+--- @return number[]
+local function wNaf(bits, w)
     -- TODO Find a more elegant way of doing this.
     local wPow = 2 ^ w
     local wPowh = wPow / 2
@@ -220,6 +238,10 @@ local function WNAF(bits, w)
     return out
 end
 
+--- Computes a multiplication table for wNAF form multiplication.
+--- @param P EdPoint The base point.
+--- @param w number Log2 of the radix, must be at least 1.
+--- @return NsPoint[]
 local function WNAFTable(P, w)
     local dP = double(P)
     local out = {niels(P)}
@@ -230,10 +252,8 @@ local function WNAFTable(P, w)
 end
 
 --- Performs a scalar multiplication by the base point G.
---
--- @tparam {number...} bits The scalar multiplier, in little-endian bits.
--- @treturn point The product.
---
+--- @param bits number[] The scalar multiplicand little-endian bits.
+--- @return EdPoint
 local function mulG(bits)
     local sw = signedRadixW(bits, G_W)
     local R = O
@@ -249,13 +269,11 @@ local function mulG(bits)
 end
 
 --- Performs a scalar multiplication operation.
---
--- @tparam point P The base point.
--- @tparam {number...} bits The scalar multiplier, in little-endian bits.
--- @treturn point The product.
---
+--- @param P EdPoint The base point.
+--- @param bits number[] The scalar multiplicand little-endian bits.
+--- @return EdPoint
 local function mul(P, bits)
-    local naf = WNAF(bits, 5)
+    local naf = wNaf(bits, 5)
     local tbl = WNAFTable(P, 5)
     local R = O
     for i = #naf, 1, -1 do

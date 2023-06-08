@@ -1,7 +1,4 @@
 --- The Poly1305 one-time authenticator.
---
--- @module poly1305
---
 
 local expect  = require "cc.expect".expect
 local lassert = require "ccryptolib.internal.util".lassert
@@ -13,11 +10,9 @@ local p4x4 = packing.compilePack(fmt4x4)
 local mod = {}
 
 --- Computes a Poly1305 message authentication code.
---
--- @tparam string key A 32-byte single-use random key.
--- @tparam string message The message to authenticate.
--- @treturn string The 16-byte authentication tag.
---
+--- @param key string A 32-byte single-use random key.
+--- @param message string The message to authenticate.
+--- @return string tag The 16-byte authentication tag.
 function mod.mac(key, message)
     expect(1, key, "string")
     lassert(#key == 32, "key length must be 32", 2)

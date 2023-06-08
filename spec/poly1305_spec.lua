@@ -13,9 +13,9 @@ describe("poly1305.mac", function()
 
         -- Types
         expect.error(poly1305.mac, nil, msg)
-            :eq("bad argument #1 (expected string, got nil)")
+            :eq("bad argument #1 (string expected, got nil)")
         expect.error(poly1305.mac, key, nil)
-            :eq("bad argument #2 (expected string, got nil)")
+            :eq("bad argument #2 (string expected, got nil)")
 
         -- Key length
         expect.error(poly1305.mac, key .. "a", msg)

@@ -1,21 +1,19 @@
 --- Arithmetic on Curve25519's base field.
---
--- :::note Internal Module
--- This module is meant for internal use within the library. Its API is unstable
--- and subject to change without major version bumps.
--- :::
---
--- <br />
---
--- @module[kind=internal] internal.fp
---
 
 local packing = require "ccryptolib.internal.packing"
 
 local unpack = unpack or table.unpack
 local ufp, fmtfp = packing.compileUnpack("<I3I3I2I3I3I2I3I3I2I3I3I2")
 
+--- @class Fq An element of the field of integers modulo 2²⁵⁵ - 19.
+
+--- @class FpR2: Fq An Fp element with limbs inside twice the standard range.
+
+--- @class FpR1: FpR2 An Fp element with limbs inside the standard range. See
+--- the Curve25519 polynomial representation for more info around this.
+
 --- The modular square root of -1.
+--- @type FpR1
 local I = {
     0958640 * 2 ^ 0,
     0826664 * 2 ^ 22,
@@ -32,19 +30,15 @@ local I = {
 }
 
 --- Converts a Lua number to an element.
---
--- @tparam number n A number n in [0..2²²).
--- @treturn fp1
---
+--- @param n number A number n in [0..2²²).
+--- @return FpR1 out The number as an element.
 local function num(n)
     return {n, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 end
 
 --- Negates an element.
---
--- @tparam fp1 a
--- @treturn fp1 -a.
---
+--- @param a FpR1
+--- @return FpR1 out -a.
 local function neg(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
     return {
@@ -64,11 +58,9 @@ local function neg(a)
 end
 
 --- Adds two elements.
---
--- @tparam fp1 a
--- @tparam fp1 b
--- @treturn fp2 a + b.
---
+--- @param a FpR1
+--- @param b FpR1
+--- @return FpR2 out a + b.
 local function add(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
     local b00, b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11 = unpack(b)
@@ -89,11 +81,9 @@ local function add(a, b)
 end
 
 --- Subtracts an element from another.
---
--- @tparam fp1 a
--- @tparam fp1 b
--- @treturn fp2 a - b.
---
+--- @param a FpR1
+--- @param b FpR1
+--- @return FpR2 out a - b.
 local function sub(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
     local b00, b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11 = unpack(b)
@@ -113,13 +103,9 @@ local function sub(a, b)
     }
 end
 
---- Carries an element.
---
--- Also performs a small reduction modulo p.
---
--- @tparam fp2 a
--- @treturn fp1 a' ≡ a (mod p).
---
+--- Carries an element. Also performs a small reduction modulo p.
+--- @param a FpR2 The element to carry.
+--- @return FpR1 out The same element as a but in a tighter range.
 local function carry(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
     local c00, c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11
@@ -157,14 +143,14 @@ local function carry(a)
 end
 
 --- Returns the canoncal representative of a modp number.
---
--- Some elements can be represented by two different arrays of floats. This
--- returns the canonical element of the represented equivalence class. We define
--- an element as canonical if it's the smallest nonnegative number in its class.
---
--- @tparam fp2 a
--- @treturn fp1 A canonical element a' ≡ a (mod p).
---
+---
+--- Some elements can be represented by two different arrays of floats. This
+--- returns the canonical element of the represented equivalence class. We
+--- define an element as canonical if it's the smallest nonnegative number in
+--- its class.
+---
+--- @param a FpR2
+--- @return FpR1 out A canonical element a' ≡ a (mod p).
 local function canonicalize(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
     local c00, c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11
@@ -205,11 +191,9 @@ local function canonicalize(a)
 end
 
 --- Returns whether two elements are the same.
---
--- @tparam fp1 a
--- @tparam fp1 b
--- @treturn boolean Whether the two elements are the same mod p.
---
+--- @param a FpR1
+--- @param b FpR1
+--- @return boolean eq Whether a ≡ b (mod p).
 local function eq(a, b)
     local c = canonicalize(sub(a, b))
     for i = 1, 12 do if c[i] ~= 0 then return false end end
@@ -217,11 +201,9 @@ local function eq(a, b)
 end
 
 --- Multiplies two elements.
---
--- @tparam fp2 a
--- @tparam fp2 b
--- @treturn fp1 c ≡ a × b (mod p).
---
+--- @param a FpR2
+--- @param b FpR2
+--- @return FpR1 c An element such that c ≡ a × b (mod p).
 local function mul(a, b)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
     local b00, b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11 = unpack(b)
@@ -421,10 +403,8 @@ local function mul(a, b)
 end
 
 --- Squares an element.
---
--- @tparam fp2 a
--- @treturn fp1 c ≡ a² (mod p).
---
+--- @param a FpR2
+--- @return FpR1 b An element such that b ≡ a² (mod p).
 local function square(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
     local d00, d01, d02, d03, d04, d05, d06, d07, d08, d09, d10
@@ -571,11 +551,9 @@ local function square(a)
 end
 
 --- Multiplies an element by a number.
---
--- @tparam fp2 a
--- @tparam number k A number k in [0..2²²).
--- @treturn fp1 c ≡ a × k (mod p).
---
+--- @param a FpR2
+--- @param k number A number in [0..2²²).
+--- @return FpR1 c An element such that c ≡ a × k (mod p).
 local function kmul(a, k)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
     local c00, c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11
@@ -627,24 +605,20 @@ local function kmul(a, k)
 end
 
 --- Squares an element n times.
---
--- @tparam fp2 a
--- @tparam number n A positive integer.
--- @treturn fp1 c ≡ a ^ 2 ^ n (mod p).
---
+--- @param a FpR2
+--- @param n number The number of times to square a.
+--- @return FpR1 c A number c such that c ≡ a ^ 2 ^ n (mod p).
 local function nsquare(a, n)
     for _ = 1, n do a = square(a) end
     return a
 end
 
 --- Computes the inverse of an element.
---
--- Computation of the inverse requires 11 multiplications and 252 squarings.
---
--- @tparam fp2 a
--- @treturn[1] fp1 c ≡ a⁻¹ (mod p), if a ≠ 0.
--- @treturn[2] fp1 c ≡ 0 (mod p), if a = 0.
---
+---
+--- Performance: 11 multiplications and 252 squarings.
+---
+--- @param a FpR2
+--- @return FpR1 c An element such that c ≡ a⁻¹ (mod p), or 0 if c doesn't exist.
 local function invert(a)
     local a2 = square(a)
     local a9 = mul(a, nsquare(a2, 2))
@@ -662,15 +636,13 @@ local function invert(a)
     return mul(nsquare(x250, 5), a11)
 end
 
---- Returns an element x that satisfies v * x² = u.
---
--- Note that when v = 0, the returned element can take any value.
---
--- @tparam fp2 u
--- @tparam fp2 v
--- @treturn[1] fp1 x.
--- @treturn[2] nil if there is no solution.
---
+--- Returns an element x that satisfies vx² = u.
+---
+--- Note that when v = 0, the returned element can take any value.
+---
+--- @param u FpR2
+--- @param v FpR2
+--- @return FpR1? x An element such that vx² ≡ u (mod p), if it exists.
 local function sqrtDiv(u, v)
     u = carry(u)
 
@@ -711,11 +683,11 @@ local function sqrtDiv(u, v)
     end
 end
 
+--- @class String32: string A string with length equal to 32 bytes.
+
 --- Encodes an element in little-endian.
---
--- @tparam fp2 a
--- @treturn string A 32-byte string. Always represents the canonical element.
---
+--- @param a FpR1
+--- @return String32 out The 32-byte canonical encoding of a.
 local function encode(a)
     a = canonicalize(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11 = unpack(a)
@@ -744,14 +716,12 @@ local function encode(a)
     putBytes(3) acc = acc + a11 / 2 ^ 232
     putBytes(3)
 
-    return string.char(unpack(bytes))
+    return string.char(unpack(bytes)) --[[@as String32, putBytes sums to 32]]
 end
 
 --- Decodes an element in little-endian.
---
--- @tparam string b A 32-byte string. The most-significant bit is discarded.
--- @treturn fp1 The decoded element. May not be canonical.
---
+--- @param b String32 A 32-byte string, the most-significant bit is discarded.
+--- @return FpR1 out The decoded element. It may not be canonical.
 local function decode(b)
     local w00, w01, w02, w03, w04, w05, w06, w07, w08, w09, w10, w11 =
         ufp(fmtfp, b, 1)
@@ -774,11 +744,9 @@ local function decode(b)
     }
 end
 
---- Checks if two elements are equal.
---
--- @tparam fp2 a
--- @treturn boolean Whether a ≡ 0 (mod p).
---
+--- Checks if the given element is equal to 0.
+--- @param a FpR2
+--- @return boolean eqz Whether a ≡ 0 (mod p).
 local function eqz(a)
     local c = canonicalize(a)
     local c00, c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11 = unpack(c)

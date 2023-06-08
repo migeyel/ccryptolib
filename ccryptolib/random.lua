@@ -22,9 +22,7 @@ local initialized = false
 local mod = {}
 
 --- Mixes entropy into the generator, and marks it as initialized.
---
--- @tparam string seed The seed data.
---
+--- @param seed string The seed data.
 function mod.init(seed)
     expect(1, seed, "string")
     state = blake3.digestKeyed(state, seed)
@@ -32,18 +30,14 @@ function mod.init(seed)
 end
 
 --- Mixes extra entropy into the generator state.
---
--- @tparam string seed The additional entropy to mix.
---
+--- @param data string The additional entropy to mix.
 function mod.mix(data)
     state = blake3.digestKeyed(state, data)
 end
 
 --- Generates random bytes.
---
--- @tparam number len The desired output length.
--- @throws If the generator hasn't been initialized.
---
+--- @param len number The desired output length.
+--- @return string bytes 
 function mod.random(len)
     expect(1, len, "number")
     lassert(initialized, "attempt to use an uninitialized random generator", 2)

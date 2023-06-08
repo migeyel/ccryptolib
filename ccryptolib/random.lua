@@ -19,11 +19,9 @@ local ctx = {
 local state = blake3.digest(table.concat(ctx, "|"))
 local initialized = false
 
-local mod = {}
-
 --- Mixes entropy into the generator, and marks it as initialized.
 --- @param seed string The seed data.
-function mod.init(seed)
+local function init(seed)
     expect(1, seed, "string")
     state = blake3.digestKeyed(state, seed)
     initialized = true
@@ -31,14 +29,14 @@ end
 
 --- Mixes extra entropy into the generator state.
 --- @param data string The additional entropy to mix.
-function mod.mix(data)
+local function mix(data)
     state = blake3.digestKeyed(state, data)
 end
 
 --- Generates random bytes.
 --- @param len number The desired output length.
 --- @return string bytes 
-function mod.random(len)
+local function random(len)
     expect(1, len, "number")
     lassert(initialized, "attempt to use an uninitialized random generator", 2)
     local msg = ("\0"):rep(len + 32)
@@ -48,4 +46,8 @@ function mod.random(len)
     return out:sub(33)
 end
 
-return mod
+return {
+    init = init,
+    mix = mix,
+    random = random,
+}

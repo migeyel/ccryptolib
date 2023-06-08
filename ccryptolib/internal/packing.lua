@@ -90,8 +90,6 @@ local function mkUnpack(words, BE)
     return load(out)()
 end
 
-local mod = {}
-
 -- Check whether string.pack is implemented in a high-speed language.
 if not string.pack or pcall(string.dump, string.pack) then
     local function compile(fmt, fn)
@@ -119,7 +117,7 @@ if not string.pack or pcall(string.dump, string.pack) then
     --- @param fmt string A string matched by `^([><])I[I%d]+$`.
     --- @return fun(_ignored: any, ...: any): string pack A function that behaves like an unsafe version of `string.pack` for the given format string.
     --- @return string fmt
-    function mod.compilePack(fmt)
+    local function compilePack(fmt)
         if not packCache[fmt] then
             packCache[fmt] = compile(fmt, mkPack)
         end
@@ -134,26 +132,32 @@ if not string.pack or pcall(string.dump, string.pack) then
     --- @param fmt string A string matched by `^([><])I[I%d]+$`.
     --- @return fun(_ignored: any, str: string, pos: number) unpack A function that behaves like an unsafe version of `string.unpack` for the given format string. Note that the third argument isn't optional.
     --- @return string fmt
-    function mod.compileUnpack(fmt)
+    local function compileUnpack(fmt)
         if not unpackCache[fmt] then
             unpackCache[fmt] = compile(fmt, mkUnpack)
         end
         return unpackCache[fmt], fmt
     end
 
-    return mod
+    return {
+        compilePack = compilePack,
+        compileUnpack = compileUnpack,
+    }
 else
     --- (string.pack isn't nil) It's string.pack! It returns string.pack!
     --- @param fmt string
     --- @return fun(fmt: string, ...: any): string pack string.pack!
     --- @return string fmt
-    mod.compilePack = function(fmt) return string.pack, fmt end
+    local function compilePack(fmt) return string.pack, fmt end
 
     --- (string.pack isn't nil) It's string.unpack! It returns string.unpack!
     --- @param fmt string
     --- @return fun(fmt: string, str: string, pos: number) unpack string.unpack!
     --- @return string fmt
-    mod.compileUnpack = function(fmt) return string.unpack, fmt end
-end
+    local function compileUnpack(fmt) return string.unpack, fmt end
 
-return mod
+    return {
+        compilePack = compilePack,
+        compileUnpack = compileUnpack,
+    }
+end

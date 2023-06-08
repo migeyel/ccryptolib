@@ -202,13 +202,11 @@ local function blake3(iv, flags, msg, len)
     return table.concat(out):sub(1, len)
 end
 
-local mod = {}
-
 --- Hashes data using BLAKE3.
 --- @param message string The input message.
 --- @param len number? The desired hash length, in bytes. Defaults to 32.
 --- @return string hash The hash.
-function mod.digest(message, len)
+local function digest(message, len)
     expect(1, message, "string")
     len = expect(2, len, "number", "nil") or 32
     lassert(len % 1 == 0, "desired output length must be an integer", 2)
@@ -221,7 +219,7 @@ end
 --- @param message string The input message.
 --- @param len number? The desired hash length, in bytes. Defaults to 32.
 --- @return string hash The keyed hash.
-function mod.digestKeyed(key, message, len)
+local function digestKeyed(key, message, len)
     expect(1, key, "string")
     lassert(#key == 32, "key length must be 32", 2)
     expect(2, message, "string")
@@ -234,7 +232,7 @@ end
 --- Makes a context-based key derivation function (KDF).
 --- @param context string The context for the KDF.
 --- @return fun(material: string, len: number?): string kdf The KDF.
-function mod.deriveKey(context)
+local function deriveKey(context)
     expect(1, context, "string")
     local iv = {u8x4(fmt8x4, blake3(IV, DERIVE_KEY_CONTEXT, context, 32), 1)}
 
@@ -250,4 +248,8 @@ function mod.deriveKey(context)
     end
 end
 
-return mod
+return {
+    digest = digest,
+    digestKeyed = digestKeyed,
+    deriveKey = deriveKey,
+}

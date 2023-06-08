@@ -11,8 +11,6 @@ local u3x4, fmt3x4 = packing.compileUnpack("<I4I4I4")
 local p16x4, fmt16x4 = packing.compilePack("<I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4I4")
 local u16x4 = packing.compileUnpack(fmt16x4)
 
-local mod = {}
-
 --- Encrypts/Decrypts data using ChaCha20.
 --- @param key string A 32-byte random key.
 --- @param nonce string A 12-byte per-message unique nonce.
@@ -20,7 +18,7 @@ local mod = {}
 --- @param rounds number? The number of ChaCha20 rounds to use. Defaults to 20.
 --- @param offset number? The block offset to generate the keystream at. Defaults to 1.
 --- @return string out The resulting ciphertext or plaintext.
-function mod.crypt(key, nonce, message, rounds, offset)
+local function crypt(key, nonce, message, rounds, offset)
     expect(1, key, "string")
     lassert(#key == 32, "key length must be 32", 2)
     expect(2, nonce, "string")
@@ -123,4 +121,6 @@ function mod.crypt(key, nonce, message, rounds, offset)
     return table.concat(out):sub(1, #message)
 end
 
-return mod
+return {
+    crypt = crypt,
+}

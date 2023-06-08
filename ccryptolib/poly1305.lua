@@ -7,13 +7,11 @@ local packing = require "ccryptolib.internal.packing"
 local u4x4, fmt4x4 = packing.compileUnpack("<I4I4I4I4")
 local p4x4 = packing.compilePack(fmt4x4)
 
-local mod = {}
-
 --- Computes a Poly1305 message authentication code.
 --- @param key string A 32-byte single-use random key.
 --- @param message string The message to authenticate.
 --- @return string tag The 16-byte authentication tag.
-function mod.mac(key, message)
+local function mac(key, message)
     expect(1, key, "string")
     lassert(#key == 32, "key length must be 32", 2)
     expect(2, message, "string")
@@ -130,4 +128,6 @@ function mod.mac(key, message)
     return p4x4(fmt4x4, u0, u1 / 2 ^ 32, u2 / 2 ^ 64, u3 / 2 ^ 96)
 end
 
-return mod
+return {
+    mac = mac,
+}

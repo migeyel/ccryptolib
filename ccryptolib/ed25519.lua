@@ -7,12 +7,10 @@ local sha512 = require "ccryptolib.internal.sha512"
 local ed     = require "ccryptolib.internal.edwards25519"
 local random = require "ccryptolib.random"
 
-local mod = {}
-
 --- Computes a public key from a secret key.
 --- @param sk string A random 32-byte secret key.
 --- @return string pk The matching 32-byte public key.
-function mod.publicKey(sk)
+local function publicKey(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
 
@@ -27,7 +25,7 @@ end
 --- @param pk string The signer's public key.
 --- @param msg string The message to be signed.
 --- @return string sig The 64-byte signature on the message.
-function mod.sign(sk, pk, msg)
+local function sign(sk, pk, msg)
     expect(1, sk, "string")
     lassert(#sk == 32, "secret key length must be 32", 2)
     expect(2, pk, "string")
@@ -59,7 +57,7 @@ end
 --- @param msg string The signed message.
 --- @param sig string The alleged signature.
 --- @return boolean valid Whether the signature is valid or not.
-function mod.verify(pk, msg, sig)
+local function verify(pk, msg, sig)
     expect(1, pk, "string")
     lassert(#pk == 32, "public key length must be 32", 2) --- @cast pk String32
     expect(2, msg, "string")
@@ -81,4 +79,8 @@ function mod.verify(pk, msg, sig)
     return ed.encode(rv) == rStr
 end
 
-return mod
+return {
+    publicKey = publicKey,
+    sign = sign,
+    verify = verify,
+}

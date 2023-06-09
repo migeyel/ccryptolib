@@ -172,7 +172,7 @@ local function prac(P, ruleset)
     -- Throw away small order points.
     if fp.eqz(A[2]) then return end
 
-    -- Now e = d = gcd(m, n) / 8.
+    -- Now e = d = gcd(m, n).
     -- Update A from [8]P to [8 * gcd(m, n)]P.
     A = ladder(A, ruleset[1])
 

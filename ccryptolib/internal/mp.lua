@@ -1,14 +1,4 @@
 --- Multi-precision arithmetic on 264-bit integers.
---
--- :::note Internal Module
--- This module is meant for internal use within the library. Its API is unstable
--- and subject to change without major version bumps.
--- :::
---
--- <br />
---
--- @module[kind=internal] internal.mp
---
 
 local unpack = unpack or table.unpack
 

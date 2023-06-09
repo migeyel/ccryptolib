@@ -1,14 +1,4 @@
 --- Arithmetic on Curve25519's scalar field.
---
--- :::note Internal Module
--- This module is meant for internal use within the library. Its API is unstable
--- and subject to change without major version bumps.
--- :::
---
--- <br />
---
--- @module[kind=internal] internal.fq
---
 
 local mp = require "ccryptolib.internal.mp"
 local util = require "ccryptolib.internal.util"

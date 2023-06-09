@@ -4,8 +4,6 @@
 --- For performance reasons, **the generated functions do not check types,
 --- lengths, nor ranges**. You must ensure that the passed arguments are
 --- well-formed and respect the format string yourself.
----
---- <br />
 
 local fmt = string.format
 

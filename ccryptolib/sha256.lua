@@ -109,8 +109,7 @@ local function pbkdf2(password, salt, iter)
 
     -- Pad password.
     if #password > 64 then password = digest(password) end
-    password = password .. ("\0"):rep(-#password % 64)
-    password = {u16x4(fmt16x4, password, 1)}
+    password = {u16x4(fmt16x4, password .. ("\0"):rep(64), 1)}
 
     -- Compute password blocks.
     local ikp = {}

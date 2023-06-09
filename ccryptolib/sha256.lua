@@ -95,17 +95,22 @@ local function digest(data)
     return p8x4(fmt8x4, unpack(h))
 end
 
+-- Reports once every ~10ms on a standard CCEmuX emulator.
+local PBKDF2_CB_ITERATIONS = 50
+
 --- Hashes a password using PBKDF2-HMAC-SHA256.
 --- @param password string The password to hash.
 --- @param salt string The password's salt.
 --- @param iter number The number of iterations to perform.
+--- @param progress fun(iter: number)? An optional function to periodically call with the current iteration number as argument.
 --- @return string dk The 32-byte derived key.
-local function pbkdf2(password, salt, iter)
+local function pbkdf2(password, salt, iter, progress)
     expect(1, password, "string")
     expect(2, salt, "string")
     expect(3, iter, "number")
     lassert(iter % 1 == 0, "iteration number must be an integer", 2)
     lassert(iter > 0, "iteration number must be positive", 2)
+    expect(4, progress, "function", "nil")
 
     -- Pad password.
     if #password > 64 then password = digest(password) end
@@ -133,12 +138,13 @@ local function pbkdf2(password, salt, iter)
 
     -- Second iteration onwards.
     local out = {unpack(hs)}
-    for _ = 2, iter do
-        for i = 1, 8 do hs[i + 8] = pad96[i] end
+    for i = 2, iter do
+        for j = 1, 8 do hs[j + 8] = pad96[j] end
         hs = compress(hikp, hs)
-        for i = 1, 8 do hs[i + 8] = pad96[i] end
+        for j = 1, 8 do hs[j + 8] = pad96[j] end
         hs = compress(hokp, hs)
-        for i = 1, 8 do out[i] = bxor(out[i], hs[i]) end
+        for j = 1, 8 do out[j] = bxor(out[j], hs[j]) end
+        if progress and i % PBKDF2_CB_ITERATIONS == 0 then progress(i) end
     end
 
     return p8x4(fmt8x4, unpack(out))

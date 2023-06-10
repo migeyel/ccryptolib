@@ -39,7 +39,7 @@ end
 local function random(len)
     expect(1, len, "number")
     lassert(initialized, "attempt to use an uninitialized random generator", 2)
-    local msg = ("\0"):rep(len + 32)
+    local msg = ("\0"):rep(math.min(len, 0) + 32)
     local nonce = ("\0"):rep(12)
     local out = chacha20.crypt(state, nonce, msg, 8, 0)
     state = out:sub(1, 32)

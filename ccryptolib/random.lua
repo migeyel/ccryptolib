@@ -30,6 +30,7 @@ end
 --- Mixes extra entropy into the generator state.
 --- @param data string The additional entropy to mix.
 local function mix(data)
+    expect(1, data, "string")
     state = blake3.digestKeyed(state, data)
 end
 

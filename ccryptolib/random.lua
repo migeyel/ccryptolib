@@ -30,6 +30,7 @@ end
 --- Mixes extra entropy into the generator state.
 --- @param data string The additional entropy to mix.
 local function mix(data)
+    expect(1, data, "string")
     state = blake3.digestKeyed(state, data)
 end
 
@@ -39,7 +40,7 @@ end
 local function random(len)
     expect(1, len, "number")
     lassert(initialized, "attempt to use an uninitialized random generator", 2)
-    local msg = ("\0"):rep(len + 32)
+    local msg = ("\0"):rep(math.max(len, 0) + 32)
     local nonce = ("\0"):rep(12)
     local out = chacha20.crypt(state, nonce, msg, 8, 0)
     state = out:sub(1, 32)

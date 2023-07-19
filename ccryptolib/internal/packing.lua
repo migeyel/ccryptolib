@@ -95,7 +95,7 @@ if not string.pack or pcall(string.dump, string.pack) then
         local w = {}
         for i in fmt:gmatch("I([%d]+)") do
             local n = tonumber(i) or 4
-            assert(n > 0 and n <= 4, "integral size out of limits")
+            assert(n > 0 and n <= 16, "integral size out of limits")
             w[#w + 1] = n
         end
         return fn(w, e == ">")

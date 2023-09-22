@@ -50,9 +50,9 @@ end
 --- Decrypts a message.
 --- @param key string The key used on encryption.
 --- @param nonce string The nonce used on encryption.
+--- @param tag string The authentication tag returned on encryption.
 --- @param ciphertext string The ciphertext to be decrypted.
 --- @param aad string The arbitrary associated data used on encryption.
---- @param tag string The authentication tag returned on encryption.
 --- @param rounds number The number of rounds used on encryption.
 --- @return string? msg The decrypted plaintext. Or nil on auth failure.
 local function decrypt(key, nonce, tag, ciphertext, aad, rounds)

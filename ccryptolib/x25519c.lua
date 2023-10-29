@@ -3,14 +3,13 @@ local lassert = require "ccryptolib.internal.util".lassert
 local fq     = require "ccryptolib.internal.fq"
 local fp     = require "ccryptolib.internal.fp"
 local c25    = require "ccryptolib.internal.curve25519"
-local ed     = require "ccryptolib.internal.edwards25519"
 local sha512 = require "ccryptolib.internal.sha512"
 local random = require "ccryptolib.random"
 
 --- Masks an exchange secret key.
 --- @param sk string A random 32-byte Curve25519 secret key.
 --- @return string msk A masked secret key.
-local function maskX(sk)
+local function mask(sk)
     expect(1, sk, "string")
     lassert(#sk == 32, "secret key length must be 32", 2)
     local mask = random.random(32)
@@ -26,7 +25,7 @@ end
 function maskS(sk)
     expect(1, sk, "string")
     lassert(#sk == 32, "secret key length must be 32", 2)
-    return maskX(sha512.digest(sk):sub(1, 32))
+    return mask(sha512.digest(sk):sub(1, 32))
 end
 
 --- Rerandomizes the masking on a masked key.
@@ -115,22 +114,10 @@ end
 
 --- Returns the X25519 public key of this masked key.
 --- @param msk string A masked secret key.
-local function publicKeyX(msk)
+local function publicKey(msk)
     expect(1, msk, "string")
     lassert(#msk == 64, "masked secret key length must be 64", 2)
     return (exchangeOnPoint(msk, c25.G))
-end
-
---- Returns the Ed25519 public key of this masked key.
---- @param msk string A masked secret key.
---- @return string pk The Ed25519 public key matching this masked key.
-local function publicKeyS(msk)
-    expect(1, msk, "string")
-    lassert(#msk == 64, "masked secret key length must be 64", 2)
-    local xr = fq.decode(msk:sub(1, 32))
-    local r = fq.decodeClamped(msk:sub(33))
-    local y = ed.add(ed.mulG(fq.bits(xr)), ed.niels(ed.mulG(fq.bits(r))))
-    return ed.encode(ed.scale(y))
 end
 
 --- Performs a double key exchange.
@@ -146,7 +133,7 @@ end
 --- @param pk string An X25519 public key.
 --- @return string sss The shared secret between the public key and the static half of the masked key.
 --- @return string sse The shared secret betwen the public key and the ephemeral half of the masked key.
-local function exchangeX(sk, pk)
+local function exchange(sk, pk)
     expect(1, sk, "string")
     lassert(#sk == 64, "masked secret key length must be 64", 2)
     expect(2, pk, "string")
@@ -154,62 +141,10 @@ local function exchangeX(sk, pk)
     return exchangeOnPoint(sk, c25.decode(pk))
 end
 
---- Performs an exchange against an Ed25519 key.
----
---- This is done by converting the key into X25519 before passing it to the
---- regular exchange. Using this function on the result of @{signaturePk} leads
---- to the same value as using @{exchange} on the result of @{exchangePk}.
----
---- @param sk string A masked secret key.
---- @param pk string An Ed25519 public key.
---- @return string sss The shared secret between the public key and the static half of the masked key.
---- @return string sse The shared secret betwen the public key and the ephemeral half of the masked key.
-local function exchangeS(sk, pk)
-    expect(1, sk, "string")
-    lassert(#sk == 64, "masked secret key length must be 64", 2)
-    expect(2, pk, "string")
-    lassert(#pk == 32, "public key length must be 32", 2) --- @cast pk String32
-    return exchangeOnPoint(sk, c25.decodeEd(pk))
-end
-
---- Signs a message using Ed25519.
---- @param sk string A masked secret key.
---- @param pk string The Ed25519 public key matching the secret key.
---- @param msg string A message to sign.
---- @return string sig The signature on the message.
-local function sign(sk, pk, msg)
-    expect(1, sk, "string")
-    lassert(#sk == 64, "masked secret key length must be 64", 2)
-    expect(2, pk, "string")
-    lassert(#pk == 32, "public key length must be 32", 2)
-    expect(3, msg, "string")
-
-    -- Secret key.
-    local xr = fq.decode(sk:sub(1, 32))
-    local r = fq.decodeClamped(sk:sub(33))
-
-    -- Commitment.
-    local k = fq.decodeWide(random.random(64))
-    local rStr = ed.encode(ed.mulG(fq.bits(k)))
-
-    -- Challenge.
-    local e = fq.decodeWide(sha512.digest(rStr .. pk .. msg))
-
-    -- Response.
-    local s = fq.add(fq.add(k, fq.mul(xr, e)), fq.mul(r, e))
-    local sStr = fq.encode(s)
-
-    return rStr .. sStr
-end
-
 return {
-    _EXPERIMENTAL_maskX = maskX,
-    _EXPERIMENTAL_maskS = maskS,
-    _EXPERIMENTAL_remask = remask,
-    _EXPERIMENTAL_publicKeyX = publicKeyX,
-    _EXPERIMENTAL_ephemeralSk = ephemeralSk,
-    _EXPERIMENTAL_publicKeyS = publicKeyS,
-    _EXPERIMENTAL_exchangeX = exchangeX,
-    _EXPERIMENTAL_exchangeS = exchangeS,
-    _EXPERIMENTAL_sign = sign,
+    mask = mask,
+    remask = remask,
+    publicKey = publicKey,
+    ephemeralSk = ephemeralSk,
+    exchange = exchange,
 }

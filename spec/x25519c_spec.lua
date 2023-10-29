@@ -9,12 +9,12 @@ local x25519c = require "ccryptolib.x25519c"
 require "ccryptolib.random".init("mock initialization")
 
 local function exchange(sk, pk)
-    local sk = x25519c._EXPERIMENTAL_maskX(sk)
-    sk = x25519c._EXPERIMENTAL_remask(sk)
-    return (x25519c._EXPERIMENTAL_exchangeX(sk, pk))
+    local sk = x25519c.mask(sk)
+    sk = x25519c.remask(sk)
+    return (x25519c.exchange(sk, pk))
 end
 
-describe("x25519c._EXPERIMENTAL_exchangeX", function()
+describe("x25519c.exchange", function()
     it("passes the section 5.2 test vector #1", function()
         local x = util.hexcat {
             "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4",

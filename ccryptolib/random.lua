@@ -27,6 +27,55 @@ local function init(seed)
     initialized = true
 end
 
+--- Returns whether the generator has been initialized or not.
+--- @return boolean
+local function isInit()
+    return initialized
+end
+
+--- Initializes the generator using VM instruction timing noise.
+---
+--- This function counts how many instructions the VM can execute within a single
+--- millisecond, and mixes the lower bits of these values into the generator state.
+--- The current implementation collects data for 512 ms and takes the lower 8 bits from
+--- each count.
+--- 
+--- Compared to fetching entropy from a trusted web source, this approach is riskier but
+--- more convenient. The factors that influence instruction timing suggest that this
+--- seed is unpredictable for other players, but this assumption might turn out to be
+--- untrue.
+local function initWithTiming()
+    assert(os.epoch("utc") ~= 0)
+
+    local f = assert(load("local e=os.epoch return{" .. ("e'utc',"):rep(256) .. "}"))
+
+    do -- Warmup.
+        local t = f()
+        while t[256] - t[1] > 1 do t = f() end
+    end
+
+    -- Fill up the buffer.
+    local buf = {}
+    for i = 1, 512 do
+        local t = f()
+        while t[256] == t[1] do t = f() end
+        for j = 1, 256 do
+            if t[j] ~= t[1] then
+                buf[i] = j - 1
+                break
+            end
+        end
+    end
+
+    -- Perform a histogram check to catch faulty os.epoch implementations.
+    local hist = {}
+    for i = 0, 255 do hist[i] = 0 end
+    for i = 1, #buf do hist[buf[i]] = hist[buf[i]] + 1 end
+    for i = 0, 255 do assert(hist[i] < 20) end
+
+    init(string.char(table.unpack(buf)))
+end
+
 --- Mixes extra entropy into the generator state.
 --- @param data string The additional entropy to mix.
 local function mix(data)
@@ -49,6 +98,8 @@ end
 
 return {
     init = init,
+    isInit = isInit,
+    initWithTiming = initWithTiming,
     mix = mix,
     random = random,
 }

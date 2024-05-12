@@ -7,6 +7,7 @@ All functions that take secret input may query the library's random generator,
 hoping for the best like other libraries do, CCryptoLib shifts that burden into
 *you!*
 
+### Initializing using a Trusted Web Source
 If you trust the tmpim Krist node, you can fetch a socket token and use it for
 initialization:
 ```lua
@@ -24,5 +25,10 @@ random.init(data.url)
 http.websocket(data.url).close()
 ```
 
-Otherwise, you will need to find another high-quality random entropy source to
-initialize the generator. **DO NOT INITIALIZE USING MATH.RANDOM.**
+### Initializing using VM Instruction Counting
+As of v1.2.0, you can also initialize the generator using VM instruction timing noise.
+See the `random.initWithTiming` method for security risks of taking this approach.
+```lua
+local random = require "ccryptolib.random"
+random.initWithTiming()
+```

@@ -9,7 +9,8 @@ local lassert = util.lassert
 local ctx = {
     "ccryptolib 2023-04-11T19:43Z random.lua initialization context",
     os.epoch("utc"),
-    os.epoch("ingame"),
+    os.day(),
+    os.time(),
     math.random(0, 2 ^ 24 - 1),
     math.random(0, 2 ^ 24 - 1),
     tostring({}),

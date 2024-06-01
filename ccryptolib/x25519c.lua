@@ -22,7 +22,7 @@ end
 --- Masks a signature secret key.
 --- @param sk string A random 32-byte Edwards25519 secret key.
 --- @return string msk A masked secret key.
-function maskS(sk)
+local function maskS(sk)
     expect(1, sk, "string")
     lassert(#sk == 32, "secret key length must be 32", 2)
     return mask(sha512.digest(sk):sub(1, 32))

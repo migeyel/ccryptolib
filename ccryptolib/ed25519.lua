@@ -37,7 +37,8 @@ local function sign(sk, pk, msg)
     local x = fq.decodeClamped(h:sub(1, 32))
 
     -- Commitment.
-    local k = fq.decodeWide(random.random(64))
+    local hPrefix = h:sub(33, 64)
+    local k = fq.decodeWide(sha512.digest(hPrefix .. msg))
     local r = ed.mulG(fq.bits(k))
     local rStr = ed.encode(r)
 
@@ -45,8 +46,7 @@ local function sign(sk, pk, msg)
     local e = fq.decodeWide(sha512.digest(rStr .. pk .. msg))
 
     -- Response.
-    local m = fq.decodeWide(random.random(64))
-    local s = fq.sub(fq.add(k, fq.mul(fq.add(x, m), e)), fq.mul(m, e))
+    local s = fq.add(k, fq.mul(x, e))
     local sStr = fq.encode(s)
 
     return rStr .. sStr

@@ -5,7 +5,6 @@ local lassert = require "ccryptolib.internal.util".lassert
 local fq     = require "ccryptolib.internal.fq"
 local sha512 = require "ccryptolib.internal.sha512"
 local ed     = require "ccryptolib.internal.edwards25519"
-local random = require "ccryptolib.random"
 
 --- Computes a public key from a secret key.
 --- @param sk string A random 32-byte secret key.

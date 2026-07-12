@@ -78,14 +78,15 @@ local ZERO = mp.num(0)
 --
 local function reduce(a)
     local c = mp.sub(a, Q)
+    local out, overflow = mp.carry(c)
 
     -- Return carry(a) if a < q.
-    if mp.approx(c) < 0 then return (mp.carry(a)) end
+    if overflow < 0 then return (mp.carry(a)) end
 
     -- c >= q means c - q >= 0.
     -- Since q < 2²⁸⁸, c < 2q means c - q < q < 2²⁸⁸.
     -- c's limbs fit in (-2²⁶..2²⁶), since subtraction adds at most one bit.
-    return (mp.carry(c)) -- cc < q implies that the carry number is 0.
+    return out -- cc < q implies that the carry number is 0.
 end
 
 --- Adds two scalars mod q.
@@ -236,9 +237,12 @@ end
 --
 local function makeRuleset(a, b)
     -- The numbers in raw multiprecision tables.
+    ---@type MpSW11L24
     local dt = demontgomery(a) -- (-2²⁴..2²⁴)
+    ---@type MpSW11L24
     local et = demontgomery(b) -- (-2²⁴..2²⁴)
-    local ft = mp.sub(dt, et)  -- (-2²⁵..2²⁵)
+    ---@type MpSW11L24
+    local ft = mp.carryWeak(mp.sub(dt, et))  -- (-2²⁴..2²⁴)
 
     -- Residue classes of (d, e) modulo 2.
     local d2 = mp.mod2(dt)
@@ -256,8 +260,11 @@ local function makeRuleset(a, b)
     local lut3 = {[0] = 0, 2, 1}
 
     local rules = {}
-    while ff ~= 0 do
-        if ff < 0 then
+    while true do
+        local cmp = mp.cmp(mp.carry(dt), mp.carry(et))
+        if cmp == 0 then
+            break
+        elseif cmp < 0 then
             -- M0. d < e
             rules[#rules + 1] = 0
             -- (d, e) ← (e, d)
@@ -265,33 +272,34 @@ local function makeRuleset(a, b)
             d2, e2 = e2, d2
             d3, e3 = e3, d3
             ef = mp.approx(et)
-            ft = mp.sub(dt, et)
+            ft = mp.carry(mp.sub(dt, et))
             ff = -ff
-        elseif 4 * ff < ef and d3 == lut3[e3] then
+        elseif 4 * ff - ef < -1 and d3 == lut3[e3] then
             -- M1. e < d ≤ 5/4 e, d ≡ -e (mod 3)
             rules[#rules + 1] = 1
             -- (d, e) ← ((2d - e)/3, (2e - d)/3)
-            dt, et = mp.third(mp.add(dt, ft)), mp.third(mp.sub(et, ft))
+            dt = mp.third(mp.carryWeak(mp.add(dt, ft)))
+            et = mp.third(mp.carryWeak(mp.sub(et, ft)))
             d2, e2 = e2, d2
             d3, e3 = mp.mod3(dt), mp.mod3(et)
             ef = mp.approx(et)
-        elseif 4 * ff < ef and d2 == e2 and d3 == e3 then
+        elseif 4 * ff - ef < -1 and d2 == e2 and d3 == e3 then
             -- M2. e < d ≤ 5/4 e, d ≡ e (mod 6)
             rules[#rules + 1] = 2
             -- (d, e) ← ((d - e)/2, e)
             dt = mp.half(ft)
             d2 = mp.mod2(dt)
             d3 = lut3[(d3 - e3) % 3]
-            ft = mp.sub(dt, et)
+            ft = mp.carryWeak(mp.sub(dt, et))
             ff = mp.approx(ft)
-        elseif ff < 3 * ef then
+        elseif ff - 3 * ef < -1 then
             -- M3. d ≤ 4e
             rules[#rules + 1] = 3
             -- (d, e) ← (d - e, e)
             dt = mp.carryWeak(ft)
             d2 = (d2 - e2) % 2
             d3 = (d3 - e3) % 3
-            ft = mp.sub(dt, et)
+            ft = mp.carryWeak(mp.sub(dt, et))
             ff = mp.approx(ft)
         elseif d2 == e2 then
             -- M4. d ≡ e (mod 2)
@@ -300,7 +308,7 @@ local function makeRuleset(a, b)
             dt = mp.half(ft)
             d2 = mp.mod2(dt)
             d3 = lut3[(d3 - e3) % 3]
-            ft = mp.sub(dt, et)
+            ft = mp.carryWeak(mp.sub(dt, et))
             ff = mp.approx(ft)
         elseif d2 == 0 then
             -- M5. d ≡ 0 (mod 2)
@@ -309,7 +317,7 @@ local function makeRuleset(a, b)
             dt = mp.half(dt)
             d2 = mp.mod2(dt)
             d3 = lut3[d3]
-            ft = mp.sub(dt, et)
+            ft = mp.carryWeak(mp.sub(dt, et))
             ff = mp.approx(ft)
         elseif d3 == 0 then
             -- M6. d ≡ 0 (mod 3)
@@ -318,15 +326,15 @@ local function makeRuleset(a, b)
             dt = mp.carryWeak(mp.sub(mp.third(dt), et))
             d2 = (d2 - e2) % 2
             d3 = mp.mod3(dt)
-            ft = mp.sub(dt, et)
+            ft = mp.carryWeak(mp.sub(dt, et))
             ff = mp.approx(ft)
         elseif d3 == lut3[e3] then
             -- M7. d ≡ -e (mod 3)
             rules[#rules + 1] = 7
             -- (d, e) ← ((d - 2e)/3, e)
-            dt = mp.third(mp.sub(ft, et))
+            dt = mp.third(mp.carryWeak(mp.sub(ft, et)))
             d3 = mp.mod3(dt)
-            ft = mp.sub(dt, et)
+            ft = mp.carryWeak(mp.sub(dt, et))
             ff = mp.approx(ft)
         elseif d3 == e3 then
             -- M8. d ≡ e (mod 3)
@@ -335,7 +343,7 @@ local function makeRuleset(a, b)
             dt = mp.third(ft)
             d2 = (d2 - e2) % 2
             d3 = mp.mod3(dt)
-            ft = mp.sub(dt, et)
+            ft = mp.carryWeak(mp.sub(dt, et))
             ff = mp.approx(ft)
         else
             -- M9. e ≡ 0 (mod 2)
@@ -345,7 +353,7 @@ local function makeRuleset(a, b)
             e2 = mp.mod2(et)
             e3 = lut3[e3]
             ef = mp.approx(et)
-            ft = mp.sub(dt, et)
+            ft = mp.carryWeak(mp.sub(dt, et))
             ff = mp.approx(ft)
         end
     end

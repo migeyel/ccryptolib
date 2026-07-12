@@ -257,24 +257,45 @@ end
 local function approx(a)
     local a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a10 = unpack(a)
     return a00
-         + a01 * 2 ^ 24
-         + a02 * 2 ^ 48
-         + a03 * 2 ^ 72
-         + a04 * 2 ^ 96
-         + a05 * 2 ^ 120
-         + a06 * 2 ^ 144
-         + a07 * 2 ^ 168
-         + a08 * 2 ^ 192
-         + a09 * 2 ^ 216
-         + a10 * 2 ^ 240
+        + a01 * 2 ^ 24
+        + a02 * 2 ^ 48
+        + a03 * 2 ^ 72
+        + a04 * 2 ^ 96
+        + a05 * 2 ^ 120
+        + a06 * 2 ^ 144
+        + a07 * 2 ^ 168
+        + a08 * 2 ^ 192
+        + a09 * 2 ^ 216
+        + a10 * 2 ^ 240
 end
 
---- Compares two numbers for ordering.
---- @param a MpSW11L24
---- @param b MpSW11L24
---- @return number ord Some number with ord < 0 iff a < b and ord = 0 iff a = b.
+--- @param a MpUW11L24
+--- @param b MpUW11L24
+--- @return number c A number that compares to 0 the same as a compares to b.
 local function cmp(a, b)
-    return approx(sub(a, b))
+    return a[11] < b[11] and -1
+        or a[11] > b[11] and 1
+        or a[10] < b[10] and -1
+        or a[10] > b[10] and 1
+        or a[9] < b[9] and -1
+        or a[9] > b[9] and 1
+        or a[8] < b[8] and -1
+        or a[8] > b[8] and 1
+        or a[7] < b[7] and -1
+        or a[7] > b[7] and 1
+        or a[6] < b[6] and -1
+        or a[6] > b[6] and 1
+        or a[5] < b[5] and -1
+        or a[5] > b[5] and 1
+        or a[4] < b[4] and -1
+        or a[4] > b[4] and 1
+        or a[3] < b[3] and -1
+        or a[3] > b[3] and 1
+        or a[2] < b[2] and -1
+        or a[2] > b[2] and 1
+        or a[1] < b[1] and -1
+        or a[1] > b[1] and 1
+        or 0
 end
 
 local function num(a)

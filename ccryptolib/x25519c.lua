@@ -1,8 +1,9 @@
 local expect = require "cc.expect".expect
 local lassert = require "ccryptolib.internal.util".lassert
-local fq     = require "ccryptolib.internal.fq"
-local fp     = require "ccryptolib.internal.fp"
-local c25    = require "ccryptolib.internal.curve25519"
+local hw = require "ccryptolib.internal.hw"
+local fq = require "ccryptolib.internal.fq"
+local fp = require "ccryptolib.internal.fp"
+local c25 = require "ccryptolib.internal.curve25519"
 local sha512 = require "ccryptolib.internal.sha512"
 local random = require "ccryptolib.random"
 
@@ -52,6 +53,23 @@ local function ephemeralSk(msk)
     expect(1, msk, "string")
     lassert(#msk == 64, "masked secret key length must be 64", 2)
     return msk:sub(33)
+end
+
+-- This does not have the same behavior on twist points. It is technically
+-- inconsistent, but those points are all adversarial inputs, so we may as well
+-- not care.
+local function hwExchangeOnPoint(sk, P)
+    local ok1, rP = hw.x25519Exchange(sk:sub(33), P)
+    if not ok1 then return end
+
+    local xr = fq.decode(sk:sub(1, 32))
+    local r = fq.decodeClamped(sk:sub(33))
+    local x = fq.add(xr, r)
+
+    local ok2, xP = hw.x25519Exchange(fq.encodeClamped(x), P)
+    if not ok2 then return end
+
+    return true, xP, rP
 end
 
 local function exchangeOnPoint(sk, P)
@@ -112,11 +130,15 @@ local function exchangeOnPoint(sk, P)
     return fp.encode(fp.mul(xPx, xPzInv)), fp.encode(fp.mul(rPx, rPzInv))
 end
 
+local G_ENC = fp.encode(fp.num(9))
+
 --- Returns the X25519 public key of this masked key.
 --- @param msk string A masked secret key.
 local function publicKey(msk)
     expect(1, msk, "string")
     lassert(#msk == 64, "masked secret key length must be 64", 2)
+    local ok, xP, rP = hwExchangeOnPoint(msk, G_ENC)
+    if ok then return xP, rP end
     return (exchangeOnPoint(msk, c25.G))
 end
 
@@ -138,6 +160,8 @@ local function exchange(sk, pk)
     lassert(#sk == 64, "masked secret key length must be 64", 2)
     expect(2, pk, "string")
     lassert(#pk == 32, "public key length must be 32", 2) --- @cast pk String32
+    local ok, xP, rP = hwExchangeOnPoint(sk, pk)
+    if ok then return xP, rP end
     return exchangeOnPoint(sk, c25.decode(pk))
 end
 

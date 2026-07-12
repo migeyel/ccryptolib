@@ -2,9 +2,10 @@
 
 local expect = require "cc.expect".expect
 local lassert = require "ccryptolib.internal.util".lassert
-local fq     = require "ccryptolib.internal.fq"
+local hw = require "ccryptolib.internal.hw"
+local fq = require "ccryptolib.internal.fq"
 local sha512 = require "ccryptolib.internal.sha512"
-local ed     = require "ccryptolib.internal.edwards25519"
+local ed = require "ccryptolib.internal.edwards25519"
 local random = require "ccryptolib.random"
 
 --- Computes a public key from a secret key.
@@ -13,6 +14,8 @@ local random = require "ccryptolib.random"
 local function publicKey(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
+    local ok, out = hw.ed25519PublicKey(sk)
+    if ok then return out end
 
     local h = sha512.digest(sk)
     local x = fq.decodeClamped(h:sub(1, 32))
@@ -31,6 +34,12 @@ local function sign(sk, pk, msg)
     expect(2, pk, "string")
     lassert(#pk == 32, "public key length must be 32", 2)
     expect(3, msg, "string")
+
+    -- Note: We use randomization as a side channel attack mitigation attempt.
+    -- Calls to other libraries will almost surely use the standardized
+    -- deterministic signatues instead.
+    local ok, out = hw.ed25519Sign(msg, sk)
+    if ok then return out end
 
     -- Secret key.
     local h = sha512.digest(sk)
@@ -63,6 +72,12 @@ local function verify(pk, msg, sig)
     expect(2, msg, "string")
     expect(3, sig, "string")
     lassert(#sig == 64, "signature length must be 64", 2)
+
+    -- Note: The library verifier may use strict signature verification, which
+    -- rejects signatures that we don't with some adversarial signatures. We
+    -- make no guarantees on those so we can get by regardless.
+    local ok, out = hw.ed25519Verify(msg, sig, pk)
+    if ok then return out end
 
     local y = ed.decode(pk)
     if not y then return false end

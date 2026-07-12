@@ -1,7 +1,8 @@
 --- The SHA512 cryptographic hash function.
 
-local expect  = require "cc.expect".expect
+local expect = require "cc.expect".expect
 local packing = require "ccryptolib.internal.packing"
+local hw = require "ccryptolib.internal.hw"
 
 local shl = bit32.lshift
 local shr = bit32.rshift
@@ -53,6 +54,8 @@ local K = {
 --- @return string hash The 64-byte hash value.
 local function digest(data)
     expect(1, data, "string")
+    local ok, out = hw.sha512(data)
+    if ok then return out end
 
     -- Pad input.
     local bitlen = #data * 8

@@ -1,8 +1,9 @@
 --- The SHA256 cryptographic hash function.
 
-local expect  = require "cc.expect".expect
+local expect = require "cc.expect".expect
 local lassert = require "ccryptolib.internal.util".lassert
 local packing = require "ccryptolib.internal.packing"
+local hw = require "ccryptolib.internal.hw"
 
 local rol = bit32.lrotate
 local shr = bit32.rshift
@@ -80,6 +81,8 @@ end
 --- @return string hash The 32-byte hash value.
 local function digest(data)
     expect(1, data, "string")
+    local ok, out = hw.sha256(data)
+    if ok then return out end
 
     -- Pad input.
     local bitlen = #data * 8

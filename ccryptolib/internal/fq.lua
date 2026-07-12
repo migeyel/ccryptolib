@@ -214,6 +214,19 @@ local function eighth(a)
     return mul(a, T8)
 end
 
+--- Encodes a scalar for round-trip with dedcodeClamped.
+--
+-- Only values that are in the decodeClamped range can be re-encoded like this.
+--
+-- @tparam {number...} a A number 2²⁶⁴ × a mod q as 11 limbs in [0..2²⁴).
+-- @treturn string The 32-byte string encoding of 8(a ÷ 8 mod q).
+--
+local function encodeClamped(a)
+    local c1 = demontgomery(eighth(a))
+    local c2 = mp.lmul(c1, mp.num(8))
+    return pfq(fmtfq, unpack(c2))
+end
+
 --- Returns a scalar in binary.
 --
 -- @tparam {number...} a A number a < q as 11 limbs in [0..2²⁴).
@@ -369,6 +382,7 @@ return {
     sub = sub,
     mul = mul,
     encode = encode,
+    encodeClamped = encodeClamped,
     decode = decode,
     decodeWide = decodeWide,
     decodeClamped = decodeClamped,

@@ -2,6 +2,7 @@
 
 local expect = require "cc.expect".expect
 local lassert = require "ccryptolib.internal.util".lassert
+local hw = require "ccryptolib.internal.hw"
 local util = require "ccryptolib.internal.util"
 local c25 = require "ccryptolib.internal.curve25519"
 
@@ -11,6 +12,8 @@ local c25 = require "ccryptolib.internal.curve25519"
 local function publicKey(sk)
     expect(1, sk, "string")
     assert(#sk == 32, "secret key length must be 32")
+    local ok, out = hw.x25519PublicKey(sk)
+    if ok then return out end
     return c25.encode(c25.scale(c25.mulG(util.bits(sk))))
 end
 
@@ -23,6 +26,8 @@ local function exchange(sk, pk)
     lassert(#sk == 32, "secret key length must be 32", 2)
     expect(2, pk, "string")
     lassert(#pk == 32, "public key length must be 32", 2) --- @cast pk String32
+    local ok, out = hw.x25519Exchange(sk, pk)
+    if ok then return out end
     return c25.encode(c25.scale(c25.ladder8(c25.decode(pk), util.bits8(sk))))
 end
 

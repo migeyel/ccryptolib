@@ -99,7 +99,8 @@ end
 --- as entropy source. See its documentation for security caveats.
 local function initAuto()
     mixHwSeed()
-    if not hwMixed then return initWithTiming() end
+    if not hwMixed then initWithTiming() end
+    initialized = true
 end
 
 --- Mixes extra entropy into the generator state.
